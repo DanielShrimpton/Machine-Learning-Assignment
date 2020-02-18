@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from pandas.plotting import scatter_matrix
+from typing import List
 
 FOLDER = './data/'
 
 
 class ProcessData:
-    def __init__(self, folder: str = None, filename: str = None, read: bool = False, data: list[pd.DataFrame] = None,
-                 tt: bool = False):
+    def __init__(self, folder: str = None, filename: str = None, read: bool = False, data: List[pd.DataFrame] = None, tt: bool = False):
         if tt:
             self.dataset = data[0]
             self.train_set = ProcessData(read=False, data=[data[1]])
@@ -50,6 +50,7 @@ class ProcessData:
         data = self.dataset.iloc[:, column]
         stuff = label_encoder.fit_transform(np.array(data))
         self.dataset.loc[:, new_name] = stuff
+        print(label_encoder.classes_)
 
     def corr(self):
         return self.dataset.corr()
