@@ -10,11 +10,18 @@ FOLDER = './data/'
 
 
 class ProcessData:
-    def __init__(self, folder, filename):
-        self.file_path = os.path.join(folder, filename)
-        self.dataset = pd.read_csv(self.file_path)
-        self.train_set = None
-        self.test_set = None
+    def __init__(self, folder=None, filename=None, read=False, data=None, tt=False):
+        if tt:
+            self.dataset = data[0]
+            self.train_set = data[1]
+            self.test_set = data[2]
+        elif read:
+            self.file_path = os.path.join(folder, filename)
+            self.dataset = pd.read_csv(self.file_path)
+            self.train_set = None
+            self.test_set = None
+        else:
+            self.dataset = data
 
     def head(self):
         print(self.dataset.head())
@@ -33,21 +40,36 @@ class ProcessData:
         plt.show()
 
     def test_train_split(self, test_size=0.2, random_state=42):
-        self.train_set, self.test_set = train_test_split(self.dataset, test_size=test_size, random_state=random_state)
+        tr_set, te_set = train_test_split(self.dataset, test_size=test_size, random_state=random_state)
+        self.test_set = ProcessData(read=False, data=te_set)
+        self.train_set = ProcessData(read=False, data=tr_set)
 
     def label_encode(self, column, new_name):
-        labelencoder = LabelEncoder()
+        label_encoder = LabelEncoder()
         data = self.dataset.iloc[:, column]
-        stuff = labelencoder.fit_transform(np.array(data))
+        stuff = label_encoder.fit_transform(np.array(data))
         self.dataset.loc[:, new_name] = stuff
 
+    def corr(self):
+        return self.dataset.corr()
 
-studentInfo = ProcessData(FOLDER, 'studentInfo.csv')
+    def drop(self, column, axis):
+        data = [self.dataset.drop(column, axis=axis), self.train_set.dataset.drop(column, axis=axis), self.test_set.dataset.drop(column, axis=axis)]
+        return ProcessData(read=False, data=data, tt=True)
+
+
+studentInfo = ProcessData(folder=FOLDER, filename='studentInfo.csv', read=True)
 studentInfo.label_encode(11, 'result')
-print(studentInfo.dataset['final_result'].value_counts())
-print(studentInfo.dataset['result'].value_counts())
+studentInfo.count('final_result')
+studentInfo.count('result')
 studentInfo.test_train_split()
 corr_matrix = studentInfo.train_set.corr()
 print(corr_matrix['result'].sort_values(ascending=False))
-scatter_matrix(studentInfo.train_set)
+scatter_matrix(studentInfo.train_set.dataset)
 plt.show()
+
+studentInfo.train_set.dataset.plot(kind='scatter', x='studied_credits', y='result', alpha=0.1)
+plt.show()
+
+studentInfo2 = studentInfo.drop('result', 1)
+studentInfo2 = studentInfo2.drop('final_result', 1)
