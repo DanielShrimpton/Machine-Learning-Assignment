@@ -13,8 +13,8 @@ class ProcessData:
     def __init__(self, folder=None, filename=None, read=False, data=None, tt=False):
         if tt:
             self.dataset = data[0]
-            self.train_set = data[1]
-            self.test_set = data[2]
+            self.train_set = ProcessData(read=False, data=data[1])
+            self.test_set = ProcessData(read=False, data=data[2])
         elif read:
             self.file_path = os.path.join(folder, filename)
             self.dataset = pd.read_csv(self.file_path)
