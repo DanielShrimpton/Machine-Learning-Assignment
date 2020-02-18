@@ -11,7 +11,8 @@ FOLDER = './data/'
 
 
 class ProcessData:
-    def __init__(self, folder: str = None, filename: str = None, read: bool = False, data: List[pd.DataFrame] = None, tt: bool = False):
+    def __init__(self, folder: str = None, filename: str = None, read: bool = False, data: List[pd.DataFrame] = None,
+                 tt: bool = False):
         if tt:
             self.dataset = data[0]
             self.train_set = ProcessData(read=False, data=[data[1]])
