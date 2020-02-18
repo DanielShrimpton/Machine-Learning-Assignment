@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from pandas.plotting import scatter_matrix
 
 FOLDER = './data/'
 
@@ -42,3 +43,11 @@ class ProcessData:
 
 
 studentInfo = ProcessData(FOLDER, 'studentInfo.csv')
+studentInfo.label_encode(11, 'result')
+print(studentInfo.dataset['final_result'].value_counts())
+print(studentInfo.dataset['result'].value_counts())
+studentInfo.test_train_split()
+corr_matrix = studentInfo.train_set.corr()
+print(corr_matrix['result'].sort_values(ascending=False))
+scatter_matrix(studentInfo.train_set)
+plt.show()
