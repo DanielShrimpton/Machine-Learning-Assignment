@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from pandas.plotting import scatter_matrix
 from typing import List
+from mpl_toolkits.mplot3d import Axes3D
 
 FOLDER = './data/'
 
@@ -89,4 +90,22 @@ studentAssessment.dataset.plot(kind='scatter', x='id_assessment', y='score', alp
 plt.show()
 studentAssessment.dataset.plot(kind='scatter', x='id_student', y='score', alpha=0.1, c='id_assessment',
                                cmap=plt.get_cmap('jet'), colorbar=True)
+plt.show()
+
+studentAssessment.test_train_split()
+
+score = studentAssessment.test_set.dataset.score
+z = score
+student = studentAssessment.test_set.dataset.id_student
+y = student
+assessment = studentAssessment.test_set.dataset.id_assessment
+x = assessment
+
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+stuff = ax.scatter(x, y, z, cmap=plt.get_cmap('jet'), c=student, alpha=0.1)
+ax.set_xlabel('id_assessment')
+ax.set_ylabel('id_student')
+ax.set_zlabel('score')
+fig.colorbar(stuff)
 plt.show()
