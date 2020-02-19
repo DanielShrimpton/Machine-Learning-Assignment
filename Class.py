@@ -77,3 +77,16 @@ plt.show()
 
 studentInfo2 = studentInfo.drop('result', 1)
 studentInfo2 = studentInfo2.drop('final_result', 1)
+
+studentAssessment = ProcessData(folder=FOLDER, filename='studentAssessment.csv', read=True)
+studentAssessment.info()
+studentAssessment.describe()
+studentAssessment.hist()
+scatter_matrix(studentAssessment.dataset)
+plt.show()
+studentAssessment.dataset.plot(kind='scatter', x='id_assessment', y='score', alpha=0.1, c='id_student',
+                               cmap=plt.get_cmap("jet"), colorbar=True)
+plt.show()
+studentAssessment.dataset.plot(kind='scatter', x='id_student', y='score', alpha=0.1, c='id_assessment',
+                               cmap=plt.get_cmap('jet'), colorbar=True)
+plt.show()
