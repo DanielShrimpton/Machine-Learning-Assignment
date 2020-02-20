@@ -76,15 +76,16 @@ plt.show()
 studentInfo.train_set.dataset.plot(kind='scatter', x='studied_credits', y='result', alpha=0.1)
 plt.show()
 
-studentInfo2 = studentInfo.drop('result', 1)
-studentInfo2 = studentInfo2.drop('final_result', 1)
+# studentInfo2 = studentInfo.drop('result', 1)
+studentInfo2 = studentInfo.drop('final_result', 1)
 
 studentAssessment = ProcessData(folder=FOLDER, filename='studentAssessment.csv', read=True)
 studentAssessment.info()
 studentAssessment.describe()
 studentAssessment.hist()
-scatter_matrix(studentAssessment.dataset)
 plt.show()
+# scatter_matrix(studentAssessment.dataset)
+# plt.show()
 studentAssessment.dataset.plot(kind='scatter', x='id_assessment', y='score', alpha=0.1, c='id_student',
                                cmap=plt.get_cmap("jet"), colorbar=True)
 plt.show()
@@ -94,18 +95,18 @@ plt.show()
 
 studentAssessment.test_train_split()
 
-score = studentAssessment.test_set.dataset.score
-z = score
-student = studentAssessment.test_set.dataset.id_student
-y = student
-assessment = studentAssessment.test_set.dataset.id_assessment
-x = assessment
+z = studentAssessment.test_set.dataset.score
+y = studentAssessment.test_set.dataset.id_student
+x = studentAssessment.test_set.dataset.id_assessment
 
 fig = plt.figure()
 ax = plt.axes(projection='3d')
-stuff = ax.scatter(x, y, z, cmap=plt.get_cmap('jet'), c=student, alpha=0.1)
+color_fig = ax.scatter(x, y, z, cmap=plt.get_cmap('jet'), c=y, alpha=0.1)
 ax.set_xlabel('id_assessment')
 ax.set_ylabel('id_student')
 ax.set_zlabel('score')
-fig.colorbar(stuff)
+fig.colorbar(color_fig)
 plt.show()
+
+big = ProcessData(read=False, data=[pd.concat([studentAssessment.dataset, studentInfo.dataset], sort=True)])
+big.count('id_student')
