@@ -25,6 +25,8 @@ class ProcessData:
             self.test_set = None
         else:
             self.dataset = data[0]
+            self.train_set = None
+            self.test_set = None
 
     def head(self):
         print(self.dataset.head())
@@ -58,9 +60,13 @@ class ProcessData:
         return self.dataset.corr()
 
     def drop(self, column: str, axis: int):
-        data = [self.dataset.drop(column, axis=axis), self.train_set.dataset.drop(column, axis=axis),
-                self.test_set.dataset.drop(column, axis=axis)]
-        return ProcessData(read=False, data=data, tt=True)
+        if self.test_set:
+            data = [self.dataset.drop(column, axis=axis), self.train_set.dataset.drop(column, axis=axis),
+                    self.test_set.dataset.drop(column, axis=axis)]
+            return ProcessData(read=False, data=data, tt=True)
+        else:
+            data = [self.dataset.drop(column, axis=axis)]
+            return ProcessData(read=False, data=data)
 
 
 studentInfo = ProcessData(folder=FOLDER, filename='studentInfo.csv', read=True)
