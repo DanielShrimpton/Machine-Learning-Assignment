@@ -12,7 +12,7 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 class ProcessData:
     """A class to help with making pd.DataFrames and making useful functions on them"""
-    def __init__(self, folder: str = None, filename: str = None, read: bool = False, data: List[pd.DataFrame] = None,
+    def __init__(self, folder: str = None, filename: str = None, read: bool = True, data: List[pd.DataFrame] = None,
                  tt: bool = False):
         """An init function for the class, can be read in from file, or from passed in data"""
         if tt:  # If the incoming data already has test and training sets
@@ -69,7 +69,7 @@ class ProcessData:
         """Function to return a correlation matrix of the dataset"""
         return self.dataset.corr()
 
-    def drop(self, column: str, axis: int, inplace: bool = False):
+    def drop(self, column: str, axis: int = 1, inplace: bool = True):
         """Function to drop the specified column from the dataset, can specify if inplace or not (not by default)"""
         if inplace:
             if self.test_set:  # Checking to see if the test/train split is already in place
