@@ -16,7 +16,7 @@ class ProcessData:
                  tt: bool = False):
         """An init function for the class, can be read in from file, or from passed in data"""
         if tt:  # If the incoming data already has test and training sets
-            self.dataset = data[0]
+            self.dataset = data[0].copy()
             self.train_set = ProcessData(read=False, data=[data[1]])
             self.test_set = ProcessData(read=False, data=[data[2]])
         elif read:  # If not, if it needs to read from a file
@@ -25,7 +25,7 @@ class ProcessData:
             self.train_set = None
             self.test_set = None
         else:  # Else just create one from the passed in data
-            self.dataset = data[0]
+            self.dataset = data[0].copy()
             self.train_set = None
             self.test_set = None
 
