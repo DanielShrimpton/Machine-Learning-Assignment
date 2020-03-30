@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, accuracy_score
+from sklearn.metrics import mean_squared_error, accuracy_score, confusion_matrix, \
+    classification_report
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.externals import joblib
@@ -567,40 +568,91 @@ def plot_max_features():
     plt.savefig('figs/max_features.png')  # 0.18 ??
 
 
+def compare_classifier(class_):
+    train = test.train_set.dataset
+    train_labels = test_labels.train_set.dataset
+    train_preds = class_.predict(train)
+    train_accuracy = accuracy_score(train_labels, train_preds)
+    train_mse = mean_squared_error(train_labels, train_preds)
+    train_rmse = np.sqrt(train_mse)
+    train_confusion = confusion_matrix(train_labels, train_preds)
+    print("Train Accuracy:  %.2f %%" % (train_accuracy * 100.0))
+    print("Train MSE:       %.4f" % train_mse)
+    print("Train RMSE:      %.4f" % train_rmse)
+    # print(train_confusion)
+    print("Train report:")
+    print(classification_report(train_labels, train_preds))
+
+    print()
+
+    _test = test.test_set.dataset
+    _test_labels = test_labels.test_set.dataset
+    test_preds = class_.predict(_test)
+    test_accuracy = accuracy_score(_test_labels, test_preds)
+    test_mse = mean_squared_error(_test_labels, test_preds)
+    test_rmse = np.sqrt(test_mse)
+    test_confusion = confusion_matrix(_test_labels, test_preds)
+    print("Test Accuracy:   %.2f%%" % (test_accuracy * 100.0))
+    print("Test MSE:        %.4f" % test_mse)
+    print("Test RMSE:       %.4f" % test_rmse)
+    # print(test_confusion)
+    print("Test report:")
+    print(classification_report(_test_labels, test_preds))
+    """
+    High recall     - the class is correctly recognised (small number of False Negatives)
+    High precision  - example labelled as positive is positive (Small number of False Positives)
+    High recall, low Precision  - lot of positive examples are correctly recognised (Low FN), 
+                                  but lots of false negatives
+    Low recall, high recision   - Miss a lot of positive examples (High FN) but predicted 
+                                  positives are positive (low FP)
+    """
+
+
 # plot_n_estimators()
 # plot_max_depth()
 # plot_min_samples_split()
 # plot_min_samples_leaf()
 # plot_max_features()
 
-rf = RandomForestClassifier(min_samples_split=0.00001, min_samples_leaf=0.00001, max_depth=22,
-                            n_estimators=200, max_features=0.18, bootstrap=False)
+start = time.time()
+rf = RandomForestClassifier(bootstrap=False, max_depth=22, max_features=0.18,
+                            min_samples_leaf=0.00001, min_samples_split=0.00001,
+                            n_estimators=200, n_jobs=-1)
 rf.fit(test.train_set.dataset, test_labels.train_set.dataset)
-train_pred = rf.predict(test.train_set.dataset)
-train_accuracy = accuracy_score(test_labels.train_set.dataset, train_pred)
-print(train_accuracy)
-print(np.sqrt(mean_squared_error(test_labels.train_set.dataset, train_pred)))
-test_pred = rf.predict(test.test_set.dataset)
-test_accuracy = accuracy_score(test_labels.test_set.dataset, test_pred)
-print(test_accuracy)
-print(np.sqrt(mean_squared_error(test_labels.test_set.dataset, test_pred)))
+end = time.time()
+print("Time to fit: %s" % datetime.timedelta(seconds=(end-start)))
+compare_classifier(rf)
 
-# def new_grid():
-# start = time.time()
-# rf = RandomForestClassifier()
-# params_grid = [
-#     {'n_jobs': [-1],
-#      'bootstrap': [False, True],
-#      'n_estimators': [200],
-#      'min_samples_split': [0.00001, 0.0001, 0.001],
-#      'min_samples_leaf': [0.00001, 0.0001, 0.001],
-#      'max_depth': [22],
-#      'max_features': [0.01, 0.05, 0.1, 0.18, 0.2, 1]
-# }]
-# grid_search = GridSearchCV(rf, params_grid, cv=10, scoring='neg_mean_squared_error',
-#                            return_train_score=True)
-# grid_search.fit(test.train_set.dataset, test_labels.train_set.dataset)
-# end = time.time()
-# print("Took %s" % datetime.timedelta(seconds=(end - start)))
-# print("Best params: %s" % grid_search.best_params_)
-# print("Best score: %f" % np.sqrt(-grid_search.best_score_))
+
+def new_grid():
+    start = time.time()
+    rf = RandomForestClassifier()
+    params_grid = [
+        {'n_jobs': [-1],
+         'bootstrap': [False, True],
+         'n_estimators': [200],
+         'min_samples_split': [0.00001, 0.0001, 0.001],
+         'min_samples_leaf': [0.00001, 0.0001, 0.001],
+         'max_depth': [22],
+         'max_features': [0.01, 0.05, 0.1, 0.18, 0.2, 1]
+    }]
+    params_grid = [
+        {
+            'n_jobs': [-1],
+             'bootstrap': [False, True],
+             'n_estimators': [16, 100, 200],
+             'min_samples_split': [0.00001],
+             'min_samples_leaf': [0.00001],
+             'max_depth': [22],
+             'max_features': [0.001, 0.01, 0.18]
+         }
+    ]
+    grid_search = GridSearchCV(rf, params_grid, cv=10, scoring='accuracy',
+                               return_train_score=True, verbose=3)
+    grid_search.fit(test.train_set.dataset, test_labels.train_set.dataset)
+    end = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end - start)))
+    print("Best params: %s" % grid_search.best_params_)
+    print("Best score: %f" % grid_search.best_score_)
+    compare_classifier(grid_search)
+
