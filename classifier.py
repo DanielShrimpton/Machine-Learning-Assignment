@@ -1,14 +1,20 @@
+import datetime
+import time
 from Class import ProcessData
 import pandas as pd
 from pandas.plotting import scatter_matrix
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, accuracy_score
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.externals import joblib
 from mpl_toolkits.mplot3d import Axes3D
+
+start = time.time()
 
 FOLDER = './data/'  # folder that contains the csv data files
 
@@ -37,11 +43,11 @@ def first_attempt():
     plt.show()
     # scatter_matrix(studentAssessment.dataset)
     # plt.show()
-    studentAssessment.dataset.plot(kind='scatter', x='id_assessment', y='score', alpha=0.1, c='id_student',
-                                   cmap=plt.get_cmap("jet"), colorbar=True)
+    studentAssessment.dataset.plot(kind='scatter', x='id_assessment', y='score', alpha=0.1,
+                                   c='id_student', cmap=plt.get_cmap("jet"), colorbar=True)
     plt.show()
-    studentAssessment.dataset.plot(kind='scatter', x='id_student', y='score', alpha=0.1, c='id_assessment',
-                                   cmap=plt.get_cmap('jet'), colorbar=True)
+    studentAssessment.dataset.plot(kind='scatter', x='id_student', y='score', alpha=0.1,
+                                   c='id_assessment', cmap=plt.get_cmap('jet'), colorbar=True)
     plt.show()
 
     studentAssessment.test_train_split()
@@ -59,7 +65,8 @@ def first_attempt():
     fig.colorbar(color_fig)
     plt.show()
 
-    big = ProcessData(read=False, data=[pd.concat([studentAssessment.dataset, studentInfo.dataset], sort=True)])
+    big = ProcessData(read=False, data=[pd.concat([studentAssessment.dataset,
+                                                   studentInfo.dataset], sort=True)])
     big.count('id_student')
     big2 = big.drop("age_band", 1)
     big2.drop("code_module", 1, inplace=True)
@@ -87,8 +94,10 @@ def first_attempt():
 
     num = 537811
     length = len(big2.dataset.id_student)
-    results = [big2.dataset.final_result.iat[x] for x in range(length) if big.dataset.id_student.iat[x] == num]
-    results_mini = [studentInfo.dataset.final_result.iat[x] for x in range(len(studentInfo.dataset.id_student)) if
+    results = [big2.dataset.final_result.iat[x] for x in range(length) if
+               big.dataset.id_student.iat[x] == num]
+    results_mini = [studentInfo.dataset.final_result.iat[x] for x in
+                    range(len(studentInfo.dataset.id_student)) if
                     studentInfo.dataset.id_student.iat[x] == num]
     print(results, results_mini)
 
@@ -140,47 +149,458 @@ for i in range(length):
         test.dataset.highest_education_.iat[i] = 1
     if test.dataset.highest_education_.iat[i] == 3:  # If it is No Formal quals
         test.dataset.highest_education_.iat[i] = 0
-print(np.array(['No Formal quals', 'Lower Than A Level', 'A Level or Equivalent', 'HE Qualification',
-                'Post Graduate Qualification']))
+print(np.array(['No Formal quals', 'Lower Than A Level', 'A Level or Equivalent',
+                'HE Qualification', 'Post Graduate Qualification']))
 test.drop('highest_education')
 # test.info()
 test.test_train_split()
-test_labels = ProcessData(read=False, tt=True, data=[test.dataset['result'], test.train_set.dataset['result'],
+test_labels = ProcessData(read=False, tt=True, data=[test.dataset['result'],
+                                                     test.train_set.dataset['result'],
                                                      test.test_set.dataset['result']])
 test.drop('result')
+end = time.time()
+elapsed = datetime.timedelta(seconds=(end - start))
+print("Data Processing Done! Took %s" % elapsed)
 
-lin_reg = LinearRegression()
-lin_reg.fit(test.train_set.dataset, test_labels.train_set.dataset)
-some_data = test.train_set.dataset.iloc[:5]
-print("Predictions:", lin_reg.predict(some_data))
-some_labels = test_labels.train_set.dataset.iloc[:5]
-print("Labels:", list(some_labels))
-
-test_predictions = lin_reg.predict(test.train_set.dataset)
-lin_mse = mean_squared_error(test_labels.train_set.dataset, test_predictions)
-lin_rmse = np.sqrt(lin_mse)
-print(lin_rmse)
-
-tree_reg = DecisionTreeRegressor()
-tree_reg.fit(test.train_set.dataset, test_labels.train_set.dataset)
-test_predictions = tree_reg.predict(test.train_set.dataset)
-tree_mse = mean_squared_error(test_labels.train_set.dataset, test_predictions)
-tree_rmse = np.sqrt(tree_mse)
-print(tree_rmse)  # OVER FITTED!!!
-scores = cross_val_score(tree_reg, test.train_set.dataset, test_labels.train_set.dataset,
-                         scoring="neg_mean_squared_error", cv=10)
-tree_rmse_scores = np.sqrt(-scores)
-
-
+# print("--- Linear Regression ---")
+# lin_reg = LinearRegression()
+# lin_reg.fit(test.train_set.dataset, test_labels.train_set.dataset)
+# some_data = test.train_set.dataset.iloc[:5]
+# print("Predictions:", lin_reg.predict(some_data))
+# some_labels = test_labels.train_set.dataset.iloc[:5]
+# print("Labels:", list(some_labels))
+#
+# test_predictions = lin_reg.predict(test.train_set.dataset)
+# lin_mse = mean_squared_error(test_labels.train_set.dataset, test_predictions)
+# lin_rmse = np.sqrt(lin_mse)
+# print(lin_rmse)
+#
+# print("--- Decision Tree Regression ---")
+# tree_reg = DecisionTreeRegressor()
+# tree_reg.fit(test.train_set.dataset, test_labels.train_set.dataset)
+# test_predictions = tree_reg.predict(test.train_set.dataset)
+# tree_mse = mean_squared_error(test_labels.train_set.dataset, test_predictions)
+# tree_rmse = np.sqrt(tree_mse)
+# print(tree_rmse)  # OVER FITTED!!!
+# scores = cross_val_score(tree_reg, test.train_set.dataset, test_labels.train_set.dataset,
+#                          scoring="neg_mean_squared_error", cv=10)
+# tree_rmse_scores = np.sqrt(-scores)
+#
+#
 def display_scores(scores):
     print("Scores:", scores)
     print("Mean:", scores.mean())
     print("Standard Deviation:", scores.std())
 
 
-display_scores(tree_rmse_scores)
+# print("--- Decision Tree Regression RMSE Scores ---")
+# display_scores(tree_rmse_scores)
+#
+# lin_scores = cross_val_score(lin_reg, test.train_set.dataset, test_labels.train_set.dataset,
+#                              scoring='neg_mean_squared_error', cv=10)
+# lin_rmse_scores = np.sqrt(-lin_scores)
+#
+# print("--- Linear Regression RMSE scores ---")
+# display_scores(lin_rmse_scores)
+#
+# print("--- Random Forest Regressor ---")
+# forest_reg1 = RandomForestRegressor()
+# forest_reg1.fit(test.train_set.dataset, test_labels.train_set.dataset)
+# forest_predictions = forest_reg1.predict(test.train_set.dataset)
+# forest_mse = mean_squared_error(test_labels.train_set.dataset, forest_predictions)
+# forest_rmse = np.sqrt(forest_mse)
+# print(forest_rmse)
+# forest_scores = cross_val_score(forest_reg1, test.train_set.dataset, test_labels.train_set.dataset,
+#                                 scoring='neg_mean_squared_error', cv=10)
+# forest_rmse_scores = np.sqrt(-forest_scores)
+# print("--- Random Forest Regressor RMSE Scores ---")
+# display_scores(forest_rmse_scores)
 
-lin_scores = cross_val_score(lin_reg, test.train_set.dataset, test_labels.train_set.dataset,
-                             scoring='neg_mean_squared_error', cv=10)
-lin_rmse_scores = np.sqrt(-lin_scores)
-display_scores(lin_rmse_scores)
+
+def hyper_forest_stuff():
+    print("--- hyper parameter tuning on forest using gridcv ---")
+    start = time.time()
+    param_grid = [
+        {'n_jobs': [-1],
+         'bootstrap': [False],
+         'n_estimators': [150, 300],
+         'max_features': [1]},  # 0.57840 False, 300, 1
+        # {'bootstrap': [False], 'n_estimators': [3, 10], 'max_features': [2, 3, 4]},
+    ]
+
+    forest_reg = RandomForestRegressor()
+    grid_search = GridSearchCV(forest_reg, param_grid, cv=5, scoring='neg_mean_squared_error',
+                               return_train_score=True)
+
+    grid_search.fit(test.train_set.dataset, test_labels.train_set.dataset)
+    end = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end-start)))
+    print("Best params: %s" % grid_search.best_params_)
+    print("Best score: %s" % np.sqrt(-grid_search.best_score_))
+    cvres = grid_search.cv_results_
+    for mean_score, params in zip(cvres["mean_test_score"], cvres['params']):
+        print(np.sqrt(-mean_score), params)
+    #
+    # joblib.dump(grid_search, "grid_search.pkl")
+
+    # loaded = joblib.load("grid_search.pkl")
+
+    print("--- Forest Classifier ---")
+    start = time.time()
+    forest_clas = RandomForestClassifier()
+    forest_clas.fit(test.train_set.dataset, test_labels.train_set.dataset)
+    end = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end-start)))
+    preds = forest_clas.predict(test.train_set.dataset)
+    print("--- Forest Classifier Accuracy ---")
+    print(accuracy_score(test_labels.train_set.dataset, preds))
+    preds = forest_clas.predict(test.test_set.dataset)
+    print(accuracy_score(test_labels.test_set.dataset, preds))
+
+    print("--- Random Forest Classifier HyperParameter tuning ---")
+    print("cv = 7, ", param_grid)
+    start = time.time()
+    for_c = RandomForestClassifier()
+    grid = GridSearchCV(for_c, param_grid, cv=7, scoring='neg_mean_squared_error',
+                        return_train_score=True)
+    grid.fit(test.train_set.dataset, test_labels.train_set.dataset)
+    end = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end-start)))
+    print("Best Params: %s" % grid.best_params_)  # [False, 1, 150]
+    print("Best Score: %f" % np.sqrt(-grid.best_score_))  # 0.664899
+    start = time.time()
+    preds2 = grid.predict(test.test_set.dataset)
+    end = time.time()
+    print("Predicting took %s" % datetime.timedelta(seconds=(end-start)))
+    preds2_accuracy = accuracy_score(test_labels.test_set.dataset, preds2)
+    print("Accuracy: %f" % preds2_accuracy)
+
+    start = time.time()
+    param_grid_2 = [
+        {'bootstrap': [True, False],
+         'n_estimators': [100, 200, 300],
+         'max_features': [1],
+         'n_jobs': [-1]
+         }]
+    print("--- Random Forest Classifier HyperParameter Tuning ---")
+    print("cv = 8, ", param_grid_2)
+    forest_classifier = RandomForestClassifier()
+    grid_search_classifier = GridSearchCV(forest_classifier, param_grid_2, cv=8,
+                                          scoring='neg_mean_squared_error', return_train_score=True)
+    grid_search_classifier.fit(test.train_set.dataset, test_labels.train_set.dataset)
+    end = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end-start)))
+    print("Best params: %s" % grid_search_classifier.best_params_)  # [True, 1, 300]
+    print("Best score: %f" % np.sqrt(-grid_search_classifier.best_score_))  # 0.663840...
+    start = time.time()
+    preds3 = grid_search_classifier.predict(test.test_set.dataset)
+    end = time.time()
+    print("Predicting took %s" % datetime.timedelta(seconds=(end-start)))
+    preds3_accuracy = accuracy_score(test_labels.test_set.dataset, preds3)
+    print("Accuracy: %f" % preds3_accuracy)
+
+
+def plot_n_estimators():
+    print("--- n_estimators plotting ---")
+    n_estimators = [32, 64, 100, 200, 300, 400, 500]
+    train_results = []
+    train_rmses = []
+    test_results = []
+    test_rmses = []
+    times = []
+    for num in n_estimators:
+        start_ = time.time()
+        forest_class = RandomForestClassifier(n_estimators=num, n_jobs=-1)
+        forest_class.fit(test.train_set.dataset, test_labels.train_set.dataset)
+
+        train_pred = forest_class.predict(test.train_set.dataset)
+        train_rmse = np.sqrt(mean_squared_error(test_labels.train_set.dataset, train_pred))
+        train_rmses.append(train_rmse)
+        train_accuracy = accuracy_score(test_labels.train_set.dataset, train_pred)
+        train_results.append(train_accuracy)
+
+        test_pred = forest_class.predict(test.test_set.dataset)
+        test_rmse = np.sqrt(mean_squared_error(test_labels.test_set.dataset, test_pred))
+        test_rmses.append(test_rmse)
+        test_accuracy = accuracy_score(test_labels.test_set.dataset, test_pred)
+        test_results.append(test_accuracy)
+        end_ = time.time()
+        times.append(end_ - start_)
+        print("n_estimators %d took: %s" % (num, datetime.timedelta(seconds=(end_ - start_))))
+
+    fig, ax1 = plt.subplots()
+
+    ax1.set_xlabel('n_estimators')
+    ax1.set_ylabel('Accuracy Score')
+
+    line1 = ax1.plot(n_estimators, train_results, 'b', label="Train Accuracy")
+    line4 = ax1.plot(n_estimators, train_rmses, 'black', label="Train RMSE")
+    line2 = ax1.plot(n_estimators, test_results, 'r', label="Test Accuracy")
+    line5 = ax1.plot(n_estimators, test_rmses, 'green', label="Test RMSE")
+
+    ax1.tick_params(axis='y')
+
+    ax2 = ax1.twinx()
+    ax2.set_ylabel('Time taken (s)')
+    ax2.set_ylim([0, max(times) + 2])
+    line3 = ax2.plot(n_estimators, times, label='Time')
+    ax2.tick_params(axis='y')
+
+    fig.tight_layout()
+    lines = line1 + line2 + line3 + line4 + line5
+    labels = [lab.get_label() for lab in lines]
+    plt.legend(lines, labels, loc='upper left')
+    plt.savefig('figs/n_estimators.png')  # No super improvement over 200 compared to time taken
+
+
+def plot_max_depth():
+    print("--- max_depth plotting ---")
+    max_depths = np.linspace(1, 32, 32, endpoint=True)
+
+    train_results = []
+    train_rmses = []
+    test_results = []
+    test_rmses = []
+    times = []
+    for num in max_depths:
+        start_ = time.time()
+        forest_class = RandomForestClassifier(max_depth=num, n_jobs=-1)
+        forest_class.fit(test.train_set.dataset, test_labels.train_set.dataset)
+
+        train_pred = forest_class.predict(test.train_set.dataset)
+        train_rmse = np.sqrt(mean_squared_error(test_labels.train_set.dataset, train_pred))
+        train_rmses.append(train_rmse)
+        train_accuracy = accuracy_score(test_labels.train_set.dataset, train_pred)
+        train_results.append(train_accuracy)
+
+        test_pred = forest_class.predict(test.test_set.dataset)
+        test_rmse = np.sqrt(mean_squared_error(test_labels.test_set.dataset, test_pred))
+        test_rmses.append(test_rmse)
+        test_accuracy = accuracy_score(test_labels.test_set.dataset, test_pred)
+        test_results.append(test_accuracy)
+        end_ = time.time()
+        times.append(end_ - start_)
+        print("max_depth %d took: %s" % (num, datetime.timedelta(seconds=(end_ - start_))))
+
+    fig, ax1 = plt.subplots()
+
+    ax1.set_xlabel('n_estimators')
+    ax1.set_ylabel('Accuracy Score')
+
+    line1 = ax1.plot(max_depths, train_results, 'b', label="Train Accuracy")
+    line4 = ax1.plot(max_depths, train_rmses, 'black', label="Train RMSE")
+    line2 = ax1.plot(max_depths, test_results, 'r', label="Test Accuracy")
+    line5 = ax1.plot(max_depths, test_rmses, 'green', label="Test RMSE")
+
+    ax1.tick_params(axis='y')
+
+    ax2 = ax1.twinx()
+    ax2.set_ylabel('Time taken (s)')
+    ax2.set_ylim([0, max(times) + 2])
+    line3 = ax2.plot(max_depths, times, label='Time')
+    ax2.tick_params(axis='y')
+
+    fig.tight_layout()
+    lines = line1 + line2 + line3 + line4 + line5
+    labels = [lab.get_label() for lab in lines]
+    plt.legend(lines, labels, loc='upper left')
+    plt.savefig('figs/max_depths.png')  # Diminishing returns after 21/22 but increase in time
+
+
+def plot_min_samples_split():
+    min_samples_splits = np.linspace(0.0001, 0.001, 10, endpoint=True)
+
+    train_results = []
+    train_rmses = []
+    test_results = []
+    test_rmses = []
+    times = []
+    for num in min_samples_splits:
+        start_ = time.time()
+        forest_class = RandomForestClassifier(min_samples_split=num, n_jobs=-1)
+        forest_class.fit(test.train_set.dataset, test_labels.train_set.dataset)
+
+        train_pred = forest_class.predict(test.train_set.dataset)
+        train_rmse = np.sqrt(mean_squared_error(test_labels.train_set.dataset, train_pred))
+        train_rmses.append(train_rmse)
+        train_accuracy = accuracy_score(test_labels.train_set.dataset, train_pred)
+        train_results.append(train_accuracy)
+
+        test_pred = forest_class.predict(test.test_set.dataset)
+        test_rmse = np.sqrt(mean_squared_error(test_labels.test_set.dataset, test_pred))
+        test_rmses.append(test_rmse)
+        test_accuracy = accuracy_score(test_labels.test_set.dataset, test_pred)
+        test_results.append(test_accuracy)
+        end_ = time.time()
+        times.append(end_ - start_)
+        print("min_samples_split %.4f took: %s" % (num, datetime.timedelta(seconds=(end_ -
+                                                                                    start_))))
+
+    fig, ax1 = plt.subplots()
+
+    ax1.set_xlabel('n_estimators')
+    ax1.set_ylabel('Accuracy Score')
+
+    line1 = ax1.plot(min_samples_splits, train_results, 'b', label="Train Accuracy")
+    line4 = ax1.plot(min_samples_splits, train_rmses, 'black', label="Train RMSE")
+    line2 = ax1.plot(min_samples_splits, test_results, 'r', label="Test Accuracy")
+    line5 = ax1.plot(min_samples_splits, test_rmses, 'green', label="Test RMSE")
+
+    ax1.tick_params(axis='y')
+
+    ax2 = ax1.twinx()
+    ax2.set_ylabel('Time taken (s)')
+    ax2.set_ylim([0, max(times) + 2])
+    line3 = ax2.plot(min_samples_splits, times, label='Time')
+    ax2.tick_params(axis='y')
+
+    fig.tight_layout()
+    lines = line1 + line2 + line3 + line4 + line5
+    labels = [lab.get_label() for lab in lines]
+    plt.legend(lines, labels, loc='upper left')
+    plt.savefig('figs/min_samples_splits.png')  # The lower the better!
+
+
+def plot_min_samples_leaf():
+    min_samples_leafs = np.linspace(0.0001, 0.002, 20, endpoint=True)
+
+    train_results = []
+    train_rmses = []
+    test_results = []
+    test_rmses = []
+    times = []
+    for num in min_samples_leafs:
+        start_ = time.time()
+        forest_class = RandomForestClassifier(min_samples_leaf=num, n_jobs=-1)
+        forest_class.fit(test.train_set.dataset, test_labels.train_set.dataset)
+
+        train_pred = forest_class.predict(test.train_set.dataset)
+        train_rmse = np.sqrt(mean_squared_error(test_labels.train_set.dataset, train_pred))
+        train_rmses.append(train_rmse)
+        train_accuracy = accuracy_score(test_labels.train_set.dataset, train_pred)
+        train_results.append(train_accuracy)
+
+        test_pred = forest_class.predict(test.test_set.dataset)
+        test_rmse = np.sqrt(mean_squared_error(test_labels.test_set.dataset, test_pred))
+        test_rmses.append(test_rmse)
+        test_accuracy = accuracy_score(test_labels.test_set.dataset, test_pred)
+        test_results.append(test_accuracy)
+        end_ = time.time()
+        times.append(end_ - start_)
+        print("min_samples_leaf %.4f took: %s" % (num, datetime.timedelta(seconds=(end_ - start_))))
+
+    fig, ax1 = plt.subplots()
+
+    ax1.set_xlabel('n_estimators')
+    ax1.set_ylabel('Accuracy Score')
+
+    line1 = ax1.plot(min_samples_leafs, train_results, 'b', label="Train Accuracy")
+    line4 = ax1.plot(min_samples_leafs, train_rmses, 'black', label="Train RMSE")
+    line2 = ax1.plot(min_samples_leafs, test_results, 'r', label="Test Accuracy")
+    line5 = ax1.plot(min_samples_leafs, test_rmses, 'green', label="Test RMSE")
+
+    ax1.tick_params(axis='y')
+
+    ax2 = ax1.twinx()
+    ax2.set_ylabel('Time taken (s)')
+    ax2.set_ylim([0, max(times) + 2])
+    line3 = ax2.plot(min_samples_leafs, times, label='Time')
+    ax2.tick_params(axis='y')
+
+    fig.tight_layout()
+    lines = line1 + line2 + line3 + line4 + line5
+    labels = [lab.get_label() for lab in lines]
+    plt.legend(lines, labels, loc='upper left')
+    plt.savefig('figs/min_samples_leafs.png')  # Lower the better again
+
+
+def plot_max_features():
+    max_features = np.linspace(0.01, 0.2, 10, endpoint=True)
+
+    train_results = []
+    train_rmses = []
+    test_results = []
+    test_rmses = []
+    times = []
+    for num in max_features:
+        start_ = time.time()
+        forest_class = RandomForestClassifier(max_features=num, n_jobs=-1)
+        forest_class.fit(test.train_set.dataset, test_labels.train_set.dataset)
+
+        train_pred = forest_class.predict(test.train_set.dataset)
+        train_rmse = np.sqrt(mean_squared_error(test_labels.train_set.dataset, train_pred))
+        train_rmses.append(train_rmse)
+        train_accuracy = accuracy_score(test_labels.train_set.dataset, train_pred)
+        train_results.append(train_accuracy)
+
+        test_pred = forest_class.predict(test.test_set.dataset)
+        test_rmse = np.sqrt(mean_squared_error(test_labels.test_set.dataset, test_pred))
+        test_rmses.append(test_rmse)
+        test_accuracy = accuracy_score(test_labels.test_set.dataset, test_pred)
+        test_results.append(test_accuracy)
+        end_ = time.time()
+        times.append(end_ - start_)
+        print("min_samples_leaf %.4f took: %s" % (num, datetime.timedelta(seconds=(end_ - start_))))
+
+    fig, ax1 = plt.subplots()
+
+    ax1.set_xlabel('n_estimators')
+    ax1.set_ylabel('Accuracy Score')
+
+    line1 = ax1.plot(max_features, train_results, 'b', label="Train Accuracy")
+    line4 = ax1.plot(max_features, train_rmses, 'black', label="Train RMSE")
+    line2 = ax1.plot(max_features, test_results, 'r', label="Test Accuracy")
+    line5 = ax1.plot(max_features, test_rmses, 'green', label="Test RMSE")
+
+    ax1.tick_params(axis='y')
+
+    ax2 = ax1.twinx()
+    ax2.set_ylabel('Time taken (s)')
+    ax2.set_ylim([0, max(times) + 2])
+    line3 = ax2.plot(max_features, times, label='Time')
+    ax2.tick_params(axis='y')
+
+    fig.tight_layout()
+    lines = line1 + line2 + line3 + line4 + line5
+    labels = [lab.get_label() for lab in lines]
+    plt.legend(lines, labels, loc='upper left')
+    plt.savefig('figs/max_features.png')  # 0.18 ??
+
+
+# plot_n_estimators()
+# plot_max_depth()
+# plot_min_samples_split()
+# plot_min_samples_leaf()
+# plot_max_features()
+
+rf = RandomForestClassifier(min_samples_split=0.00001, min_samples_leaf=0.00001, max_depth=22,
+                            n_estimators=200, max_features=0.18, bootstrap=False)
+rf.fit(test.train_set.dataset, test_labels.train_set.dataset)
+train_pred = rf.predict(test.train_set.dataset)
+train_accuracy = accuracy_score(test_labels.train_set.dataset, train_pred)
+print(train_accuracy)
+print(np.sqrt(mean_squared_error(test_labels.train_set.dataset, train_pred)))
+test_pred = rf.predict(test.test_set.dataset)
+test_accuracy = accuracy_score(test_labels.test_set.dataset, test_pred)
+print(test_accuracy)
+print(np.sqrt(mean_squared_error(test_labels.test_set.dataset, test_pred)))
+
+# def new_grid():
+# start = time.time()
+# rf = RandomForestClassifier()
+# params_grid = [
+#     {'n_jobs': [-1],
+#      'bootstrap': [False, True],
+#      'n_estimators': [200],
+#      'min_samples_split': [0.00001, 0.0001, 0.001],
+#      'min_samples_leaf': [0.00001, 0.0001, 0.001],
+#      'max_depth': [22],
+#      'max_features': [0.01, 0.05, 0.1, 0.18, 0.2, 1]
+# }]
+# grid_search = GridSearchCV(rf, params_grid, cv=10, scoring='neg_mean_squared_error',
+#                            return_train_score=True)
+# grid_search.fit(test.train_set.dataset, test_labels.train_set.dataset)
+# end = time.time()
+# print("Took %s" % datetime.timedelta(seconds=(end - start)))
+# print("Best params: %s" % grid_search.best_params_)
+# print("Best score: %f" % np.sqrt(-grid_search.best_score_))
