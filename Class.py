@@ -59,7 +59,7 @@ class ProcessData:
         self.test_set = ProcessData(read=False, data=[te_set])
         self.train_set = ProcessData(read=False, data=[tr_set])
 
-    def label_encode(self, name: str, new_name: str):
+    def label_encode(self, name: str, new_name: str, drop: bool = True):
         """Creates a label encoder on a certain column"""
         column = self.dataset.columns.get_loc(name)
         label_encoder = LabelEncoder()
@@ -67,6 +67,8 @@ class ProcessData:
         stuff = label_encoder.fit_transform(np.array(data))
         self.dataset.loc[:, new_name] = stuff
         print(label_encoder.classes_)
+        if drop:
+            self.drop(name)
 
     def corr(self):
         """Function to return a correlation matrix of the dataset"""
