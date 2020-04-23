@@ -22,21 +22,21 @@ FOLDER = './data/'  # folder that contains the csv data files
 
 
 def first_attempt():
-    studentInfo = ProcessData(folder=FOLDER, filename='studentInfo.csv', read=True)
-    studentInfo.label_encode('final_result', 'result')
-    studentInfo.count('final_result')
-    studentInfo.count('result')
-    studentInfo.test_train_split()
-    corr_matrix = studentInfo.train_set.corr()
+    student_info = ProcessData(folder=FOLDER, filename='studentInfo.csv', read=True)
+    student_info.label_encode('final_result', 'result')
+    student_info.count('final_result')
+    student_info.count('result')
+    student_info.test_train_split()
+    corr_matrix = student_info.train_set.corr()
     print(corr_matrix['result'].sort_values(ascending=False))
-    scatter_matrix(studentInfo.train_set.dataset)
+    scatter_matrix(student_info.train_set.dataset)
     plt.show()
 
-    studentInfo.train_set.dataset.plot(kind='scatter', x='studied_creduts', y='result', alpha=0.1)
+    student_info.train_set.dataset.plot(kind='scatter', x='studied_creduts', y='result', alpha=0.1)
     plt.show()
 
-    # studentInfo2 = studentInfo.drop('result', 1)
-    # studentInfo2 = studentInfo.drop('final_result', 1)
+    # student_info2 = student_info.drop('result', 1)
+    # student_info2 = student_info.drop('final_result', 1)
 
     studentAssessment = ProcessData(folder=FOLDER, filename='studentAssessment.csv', read=True)
     studentAssessment.info()
@@ -68,7 +68,7 @@ def first_attempt():
     plt.show()
 
     big = ProcessData(read=False, data=[pd.concat([studentAssessment.dataset,
-                                                   studentInfo.dataset], sort=True)])
+                                                   student_info.dataset], sort=True)])
     big.count('id_student')
     big2 = big.drop("age_band", 1)
     big2.drop("code_module", 1, inplace=True)
@@ -98,13 +98,12 @@ def first_attempt():
     length = len(big2.dataset.id_student)
     results = [big2.dataset.final_result.iat[x] for x in range(length) if
                big.dataset.id_student.iat[x] == num]
-    results_mini = [studentInfo.dataset.final_result.iat[x] for x in
-                    range(len(studentInfo.dataset.id_student)) if
-                    studentInfo.dataset.id_student.iat[x] == num]
+    results_mini = [student_info.dataset.final_result.iat[x] for x in
+                    range(len(student_info.dataset.id_student)) if
+                    student_info.dataset.id_student.iat[x] == num]
     print(results, results_mini)
 
 
-# TODO Properly process data so is unique per final result and course ID and student ID??
 def process_data():
     student_assessment = ProcessData(folder=FOLDER, filename="studentAssessment.csv")
     # student_assessment.info()
@@ -213,8 +212,8 @@ def process_data2():
     data_.dataset['id_result'] = data_.dataset['id'] + data_.dataset['final_result']
     data_.count('id_result')
     print(len(data_.dataset[['id_student', 'code_presentation']].drop_duplicates()))
-    print(data_.dataset.query('id_result == "570213FFFFail"')[['id_result',
-                                                               'code_presentation']].drop_duplicates())
+    print(data_.dataset.query('id_result == "570213FFFFail"')
+          [['id_result', 'code_presentation']].drop_duplicates())
     # data_.info()
     # corr_mat = data_.corr()
     # print(corr_mat['result'].sort_values(ascending=False))
@@ -356,8 +355,8 @@ def display_scores(scores):
 # forest_mse = mean_squared_error(data_labels.train_set.dataset, forest_predictions)
 # forest_rmse = np.sqrt(forest_mse)
 # print(forest_rmse)
-# forest_scores = cross_val_score(forest_reg1, data.train_set.dataset, data_labels.train_set.dataset,
-#                                 scoring='neg_mean_squared_error', cv=10)
+# forest_scores = cross_val_score(forest_reg1, data.train_set.dataset,
+# data_labels.train_set.dataset, scoring='neg_mean_squared_error', cv=10)
 # forest_rmse_scores = np.sqrt(-forest_scores)
 # print("--- Random Forest Regressor RMSE Scores ---")
 # display_scores(forest_rmse_scores)
@@ -365,7 +364,7 @@ def display_scores(scores):
 
 def hyper_forest_stuff():
     print("--- hyper parameter tuning on forest using gridcv ---")
-    start = time.time()
+    start_ = time.time()
     param_grid = [
         {'n_jobs': [-1],
          'bootstrap': [False],
@@ -379,8 +378,8 @@ def hyper_forest_stuff():
                                return_train_score=True)
 
     grid_search.fit(data.train_set.dataset, data_labels.train_set.dataset)
-    end = time.time()
-    print("Took %s" % datetime.timedelta(seconds=(end - start)))
+    end_ = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end_ - start_)))
     print("Best params: %s" % grid_search.best_params_)
     print("Best score: %s" % np.sqrt(-grid_search.best_score_))
     cvres = grid_search.cv_results_
@@ -392,11 +391,11 @@ def hyper_forest_stuff():
     # loaded = joblib.load("grid_search.pkl")
 
     print("--- Forest Classifier ---")
-    start = time.time()
+    start_ = time.time()
     forest_clas = RandomForestClassifier()
     forest_clas.fit(data.train_set.dataset, data_labels.train_set.dataset)
-    end = time.time()
-    print("Took %s" % datetime.timedelta(seconds=(end - start)))
+    end_ = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end_ - start_)))
     preds = forest_clas.predict(data.train_set.dataset)
     print("--- Forest Classifier Accuracy ---")
     print(accuracy_score(data_labels.train_set.dataset, preds))
@@ -405,23 +404,23 @@ def hyper_forest_stuff():
 
     print("--- Random Forest Classifier HyperParameter tuning ---")
     print("cv = 7, ", param_grid)
-    start = time.time()
+    start_ = time.time()
     for_c = RandomForestClassifier()
     grid = GridSearchCV(for_c, param_grid, cv=7, scoring='neg_mean_squared_error',
                         return_train_score=True)
     grid.fit(data.train_set.dataset, data_labels.train_set.dataset)
-    end = time.time()
-    print("Took %s" % datetime.timedelta(seconds=(end - start)))
+    end_ = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end_ - start_)))
     print("Best Params: %s" % grid.best_params_)  # [False, 1, 150]
     print("Best Score: %f" % np.sqrt(-grid.best_score_))  # 0.664899
-    start = time.time()
+    start_ = time.time()
     preds2 = grid.predict(data.test_set.dataset)
-    end = time.time()
-    print("Predicting took %s" % datetime.timedelta(seconds=(end - start)))
+    end_ = time.time()
+    print("Predicting took %s" % datetime.timedelta(seconds=(end_ - start_)))
     preds2_accuracy = accuracy_score(data_labels.test_set.dataset, preds2)
     print("Accuracy: %f" % preds2_accuracy)
 
-    start = time.time()
+    start_ = time.time()
     param_grid_2 = [
         {'bootstrap': [True, False],
          'n_estimators': [100, 200, 300],
@@ -434,14 +433,14 @@ def hyper_forest_stuff():
     grid_search_classifier = GridSearchCV(forest_classifier, param_grid_2, cv=8,
                                           scoring='neg_mean_squared_error', return_train_score=True)
     grid_search_classifier.fit(data.train_set.dataset, data_labels.train_set.dataset)
-    end = time.time()
-    print("Took %s" % datetime.timedelta(seconds=(end - start)))
+    end_ = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end_ - start_)))
     print("Best params: %s" % grid_search_classifier.best_params_)  # [True, 1, 300]
     print("Best score: %f" % np.sqrt(-grid_search_classifier.best_score_))  # 0.663840...
-    start = time.time()
+    start_ = time.time()
     preds3 = grid_search_classifier.predict(data.test_set.dataset)
-    end = time.time()
-    print("Predicting took %s" % datetime.timedelta(seconds=(end - start)))
+    end_ = time.time()
+    print("Predicting took %s" % datetime.timedelta(seconds=(end_ - start_)))
     preds3_accuracy = accuracy_score(data_labels.test_set.dataset, preds3)
     print("Accuracy: %f" % preds3_accuracy)
 
@@ -590,7 +589,7 @@ def plot_min_samples_split():
 
 
 def plot_min_samples_leaf():
-    min_samples_leafs = np.linspace(0.0001, 0.002, 20, endpoint=True)
+    # min_samples_leafs = np.linspace(0.0001, 0.002, 20, endpoint=True)
     min_samples_leafs = [0.00001, 0.0001, 0.001, 0.0015, 0.002, 0.01, 0.1, 0.5, 1]
 
     train_results = []
@@ -615,7 +614,7 @@ def plot_min_samples_leaf():
 
 
 def plot_max_features():
-    max_features = np.linspace(0.01, 0.2, 10, endpoint=True)
+    # max_features = np.linspace(0.01, 0.2, 10, endpoint=True)
     max_features = [0.01, 0.03, 0.05, 0.07, 0.1, 0.15, 0.2, 0.5, 1, 5, 10,
                     len(data.dataset.columns)]
 
@@ -676,7 +675,7 @@ def compare_classifier(class_):
     train_accuracy = accuracy_score(train_labels, train_preds)
     train_mse = mean_squared_error(train_labels, train_preds)
     train_rmse = np.sqrt(train_mse)
-    train_confusion = confusion_matrix(train_labels, train_preds)
+    # train_confusion = confusion_matrix(train_labels, train_preds)
     print("Train Accuracy:  %.2f %%" % (train_accuracy * 100.0))
     print("Train MSE:       %.4f" % train_mse)
     print("Train RMSE:      %.4f" % train_rmse)
@@ -692,7 +691,7 @@ def compare_classifier(class_):
     test_accuracy = accuracy_score(_test_labels, test_preds)
     test_mse = mean_squared_error(_test_labels, test_preds)
     test_rmse = np.sqrt(test_mse)
-    test_confusion = confusion_matrix(_test_labels, test_preds)
+    # test_confusion = confusion_matrix(_test_labels, test_preds)
     print("Test Accuracy:   %.2f%%" % (test_accuracy * 100.0))
     print("Test MSE:        %.4f" % test_mse)
     print("Test RMSE:       %.4f" % test_rmse)
@@ -720,18 +719,18 @@ def compare_classifier(class_):
 
 
 def tuned_rf():
-    start = time.time()
+    start_ = time.time()
 
-    rf = RandomForestClassifier(bootstrap=False, max_depth=22, max_features=0.01,
-                                min_samples_leaf=0.000001, min_samples_split=0.000001,
-                                n_estimators=200, n_jobs=-1, class_weight='balanced')
+    # rf = RandomForestClassifier(bootstrap=False, max_depth=22, max_features=0.01,
+    #                             min_samples_leaf=0.000001, min_samples_split=0.000001,
+    #                             n_estimators=200, n_jobs=-1, class_weight='balanced')
 
     rf = RandomForestClassifier(bootstrap=True, max_depth=27, max_features=7,
                                 min_samples_leaf=0.00001, min_samples_split=0.002,
                                 n_estimators=1000, n_jobs=-1, class_weight=None)
     rf.fit(data.train_set.dataset, data_labels.train_set.dataset)
-    end = time.time()
-    print("Time to fit: %s" % datetime.timedelta(seconds=(end - start)))
+    end_ = time.time()
+    print("Time to fit: %s" % datetime.timedelta(seconds=(end_ - start_)))
     compare_classifier(rf)
 
 
@@ -813,14 +812,14 @@ def new_grid(id_):
             }
         ]
 
-    start = time.time()
+    start_ = time.time()
     rf = RandomForestClassifier()
 
     grid_search = GridSearchCV(rf, params_grid, cv=10, scoring='accuracy',
                                return_train_score=True, verbose=3, n_jobs=-1)
     grid_search.fit(data.train_set.dataset, data_labels.train_set.dataset)
-    end = time.time()
-    print("Took %s" % datetime.timedelta(seconds=(end - start)))
+    end_ = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end_ - start_)))
     print("Best params: %s" % grid_search.best_params_)
     print("Best score: %f" % grid_search.best_score_)
     compare_classifier(grid_search)
@@ -834,12 +833,12 @@ def new_grid(id_):
 
 
 def decision_tree_class():
-    start = time.time()
+    start_ = time.time()
     dt = DecisionTreeClassifier(max_depth=26, max_features=0.001, min_samples_leaf=1,
                                 min_samples_split=7, random_state=42)
     dt.fit(data.train_set.dataset, data_labels.train_set.dataset)
-    end = time.time()
-    print("Time to fit: %s" % datetime.timedelta(seconds=(end - start)))
+    end_ = time.time()
+    print("Time to fit: %s" % datetime.timedelta(seconds=(end_ - start_)))
     compare_classifier(dt)
 
 
@@ -949,18 +948,18 @@ def plot_min_samples_split_dt():
 
 
 def hyper_dt():
-    start = time.time()
-    params_grid = [
-        {
-            'splitter': ['best', 'random'],
-            'max_depth': [1, 2, 26],
-            'min_samples_split': [8],
-            'min_samples_leaf': [0.1, 0.5, 1, 2, 6, 8, 10, 20],
-            'max_features': [0.01, 0.1, 1, 'sqrt', 'log2', 2, 8, 12],
-            'max_leaf_nodes': [None, 2, 5, 10, 100, 2000],
-            'random_state': [42]
-        }
-    ]
+    start_ = time.time()
+    # params_grid = [
+    #     {
+    #         'splitter': ['best', 'random'],
+    #         'max_depth': [1, 2, 26],
+    #         'min_samples_split': [8],
+    #         'min_samples_leaf': [0.1, 0.5, 1, 2, 6, 8, 10, 20],
+    #         'max_features': [0.01, 0.1, 1, 'sqrt', 'log2', 2, 8, 12],
+    #         'max_leaf_nodes': [None, 2, 5, 10, 100, 2000],
+    #         'random_state': [42]
+    #     }
+    # ]
 
     params_grid = [
         {
@@ -978,8 +977,8 @@ def hyper_dt():
     grid_search = GridSearchCV(dt, params_grid, cv=10, scoring='accuracy',
                                return_train_score=True, verbose=3, n_jobs=-1)
     grid_search.fit(data.train_set.dataset, data_labels.train_set.dataset)
-    end = time.time()
-    print("Took %s" % datetime.timedelta(seconds=(end - start)))
+    end_ = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end_ - start_)))
     print("Best params: %s" % grid_search.best_params_)
     print("Best score: %f" % grid_search.best_score_)
     compare_classifier(grid_search)
