@@ -6,11 +6,12 @@ import pandas as pd
 from pandas.plotting import scatter_matrix
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import cross_val_score, GridSearchCV
+from sklearn.model_selection import cross_val_score, GridSearchCV, RandomizedSearchCV, \
+    StratifiedKFold
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, accuracy_score, confusion_matrix, \
-    classification_report
+    classification_report, max_error
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.externals import joblib
@@ -263,6 +264,7 @@ def data3():
     data2.label_encode('disability', 'disability_')
 
     data2.info()
+    data2.count('final_result')
 
     grouped = data_.dataset.groupby(['id_student', 'code_presentation', 'final_result'])
     print(grouped.first())
@@ -675,10 +677,12 @@ def compare_classifier(class_):
     train_accuracy = accuracy_score(train_labels, train_preds)
     train_mse = mean_squared_error(train_labels, train_preds)
     train_rmse = np.sqrt(train_mse)
+    train_max_error = max_error(train_labels, train_preds)
     # train_confusion = confusion_matrix(train_labels, train_preds)
     print("Train Accuracy:  %.2f %%" % (train_accuracy * 100.0))
     print("Train MSE:       %.4f" % train_mse)
     print("Train RMSE:      %.4f" % train_rmse)
+    print("Train Max Error: %.2f" % train_max_error)
     # print(train_confusion)
     print("Train report:")
     print(classification_report(train_labels, train_preds))
@@ -691,10 +695,12 @@ def compare_classifier(class_):
     test_accuracy = accuracy_score(_test_labels, test_preds)
     test_mse = mean_squared_error(_test_labels, test_preds)
     test_rmse = np.sqrt(test_mse)
+    test_max_error = max_error(_test_labels, test_preds)
     # test_confusion = confusion_matrix(_test_labels, test_preds)
     print("Test Accuracy:   %.2f%%" % (test_accuracy * 100.0))
     print("Test MSE:        %.4f" % test_mse)
     print("Test RMSE:       %.4f" % test_rmse)
+    print("Test Max Error: %.2f" % test_max_error)
     # print(test_confusion)
     print("Test report:")
     print(classification_report(_test_labels, test_preds))
@@ -725,7 +731,7 @@ def tuned_rf():
     #                             min_samples_leaf=0.000001, min_samples_split=0.000001,
     #                             n_estimators=200, n_jobs=-1, class_weight='balanced')
 
-    rf = RandomForestClassifier(bootstrap=True, max_depth=27, max_features=7,
+    rf = RandomForestClassifier(bootstrap=True, max_depth=25, max_features=6,
                                 min_samples_leaf=0.00001, min_samples_split=0.002,
                                 n_estimators=1000, n_jobs=-1, class_weight=None)
     rf.fit(data.train_set.dataset, data_labels.train_set.dataset)
@@ -830,6 +836,41 @@ def new_grid(id_):
 # grid_searcher2 = new_grid(2)
 # grid_searcher3 = new_grid(3)
 # grid_searcher4 = new_grid(4)
+
+
+def randomized_search_cv_rf():
+    start_ = time.time()
+    rf = RandomForestClassifier()
+
+    params_grid = [
+        {
+            'bootstrap': [True, False],
+            'class_weight': [None, 'balanced'],
+            'max_depth': np.linspace(20, 30, 11, endpoint=True),
+            'max_features': [0.01, 0.1, 1.0, 4, 5, 6, 7, 8, 9, 10, 17],
+            'min_samples_leaf': [0.00001, 0.00002, 0.0001, 0.001, 0.01, 0.1],
+            'min_samples_split': [0.002, 0.005, 0.01, 0.1],
+            'n_estimators': [1, 16, 32, 64, 200, 500, 1000],
+            'n_jobs': [-1]
+        }
+    ]
+
+    k = StratifiedKFold(n_splits=10)
+
+    randomized = RandomizedSearchCV(rf, params_grid, cv=k, scoring='accuracy',
+                                    return_train_score=True, verbose=3, n_jobs=-1, n_iter=120)
+    randomized.fit(data.train_set.dataset, data_labels.train_set.dataset)
+    end_ = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end_ - start_)))
+
+    print("Best params: %s" % randomized.best_params_)
+    print("Best score: %f" % randomized.best_score_)
+    compare_classifier(randomized)
+
+    return randomized
+
+
+# rand = randomized_search_cv_rf()
 
 
 def decision_tree_class():
@@ -964,17 +1005,18 @@ def hyper_dt():
     params_grid = [
         {
             'splitter': ['best', 'random'],
-            'max_depth': [24, 25, 26, 27, 28],
+            'max_depth': [1, 2, 8, 26],
             'min_samples_split': [7, 8, 9, 10],
-            'min_samples_leaf': [1],
-            'max_features': [0.001, 1, 12],
-            'max_leaf_nodes': [None],
+            'min_samples_leaf': [0.001, 1, 2, 8, 20],
+            'max_features': [0.001, 1, 8, 17],
+            'max_leaf_nodes': [None, 2, 5, 10],
             'random_state': [42]
         }
     ]
 
     dt = DecisionTreeClassifier()
-    grid_search = GridSearchCV(dt, params_grid, cv=10, scoring='accuracy',
+    k = StratifiedKFold(n_splits=10)
+    grid_search = GridSearchCV(dt, params_grid, cv=k, scoring='accuracy',
                                return_train_score=True, verbose=3, n_jobs=-1)
     grid_search.fit(data.train_set.dataset, data_labels.train_set.dataset)
     end_ = time.time()
@@ -982,6 +1024,21 @@ def hyper_dt():
     print("Best params: %s" % grid_search.best_params_)
     print("Best score: %f" % grid_search.best_score_)
     compare_classifier(grid_search)
+    return grid_search
 
 
-# hyper_dt()
+# griddy = hyper_dt()
+
+
+def tuned_dt():
+    start_ = time.time()
+    dt = DecisionTreeClassifier(max_depth=26, max_features=17, max_leaf_nodes=None,
+                                min_samples_leaf=20, min_samples_split=7, random_state=42,
+                                splitter='best')
+    dt.fit(data.train_set.dataset, data_labels.train_set.dataset)
+    end_ = time.time()
+    print("Time to fit: %s" % datetime.timedelta(seconds=(end_ - start_)))
+    compare_classifier(dt)
+
+
+tuned_rf()
