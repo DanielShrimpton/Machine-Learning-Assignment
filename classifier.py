@@ -738,6 +738,101 @@ def tuned_rf():
 tuned_rf()
 
 
+def new_grid(id_):
+    if id_ == 2:
+        params_grid = [
+            {
+                'bootstrap': [True],
+                'class_weight': ['balanced', None],
+                'max_depth': [1, 8, 16, 22, 26, 32, 64],
+                'max_features': [0.001, 0.1, 1, 5, 10, 15, len(data.dataset.columns)],
+                'min_samples_leaf': [0.00001],
+                'min_samples_split': [0.0005],
+                'n_estimators': [1, 8, 16, 64, 200, 500, 1000],
+                'n_jobs': [-1]
+            }
+        ]
+    elif id_ == 3:
+        params_grid = [
+            {
+                'bootstrap': [True, False],
+                'class_weight': [None],
+                'max_depth': [24, 26, 28],
+                'max_features': [8, 10, 12, 17],
+                'min_samples_leaf': [0.00001, 0.0001],
+                'min_samples_split': [0.0008, 0.001, 0.002],
+                'n_estimators': [200, 800, 1000, 1500],
+                'n_jobs': [-1]
+            }
+        ]
+    elif id_ == 4:
+        params_grid = [
+            {
+                'bootstrap': [True],
+                'class_weight': [None],
+                'max_depth': [25, 26, 27],
+                'max_features': [6, 7, 8, 9],
+                'min_samples_leaf': [0.00001, 0.00002],
+                'min_samples_split': [0.002, 0.005, 0.01, 0.1],
+                'n_estimators': [1000],
+                'n_jobs': [-1]
+            }
+        ]
+    else:
+        # params_grid = [
+        #     {'n_jobs': [-1],
+        #      'bootstrap': [False, True],
+        #      'n_estimators': [200],
+        #      'min_samples_split': [0.00001, 0.0001, 0.001],
+        #      'min_samples_leaf': [0.00001, 0.0001, 0.001],
+        #      'max_depth': [22],
+        #      'max_features': [0.01, 0.05, 0.1, 0.18, 0.2, 1]
+        #      }]
+        # params_grid = [
+        #     {
+        #         'n_jobs': [-1],
+        #         'bootstrap': [False, True],
+        #         'n_estimators': [16, 32, 100, 200],
+        #         'min_samples_split': [0.00001, 0.0005],
+        #         'min_samples_leaf': [0.00001, 1],
+        #         'max_depth': [22, 26, 31],
+        #         'max_features': [0.001, 0.01, 0.18, 10]
+        #     }
+        # ]
+
+        params_grid = [
+            {
+                'bootstrap': [True],
+                'class_weight': ['balanced', None],
+                'max_depth': [26],
+                'max_features': [10],
+                'min_samples_leaf': [0.00001, 0.0005, 0.001, 0.1, 1],
+                'min_samples_split': [0.0005, 0.001, 0.01, 0.1, 1.0],
+                'n_estimators': [200, 500],
+                'n_jobs': [-1]
+            }
+        ]
+
+    start = time.time()
+    rf = RandomForestClassifier()
+
+    grid_search = GridSearchCV(rf, params_grid, cv=10, scoring='accuracy',
+                               return_train_score=True, verbose=3, n_jobs=-1)
+    grid_search.fit(data.train_set.dataset, data_labels.train_set.dataset)
+    end = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end - start)))
+    print("Best params: %s" % grid_search.best_params_)
+    print("Best score: %f" % grid_search.best_score_)
+    compare_classifier(grid_search)
+    return grid_search
+
+
+# grid_searcher = new_grid(1)
+# grid_searcher2 = new_grid(2)
+# grid_searcher3 = new_grid(3)
+# grid_searcher4 = new_grid(4)
+
+
 def decision_tree_class():
     start = time.time()
     dt = DecisionTreeClassifier(max_depth=26, max_features=0.001, min_samples_leaf=1,
@@ -844,7 +939,7 @@ def plot_min_samples_split_dt():
                  'dt_min_samples_splits', 'min_samples_splits')  # 8?
 
 
-decision_tree_class()
+# decision_tree_class()
 
 
 # plot_max_depth_dt()
@@ -891,36 +986,3 @@ def hyper_dt():
 
 
 # hyper_dt()
-
-
-def new_grid():
-    start = time.time()
-    rf = RandomForestClassifier()
-    params_grid = [
-        {'n_jobs': [-1],
-         'bootstrap': [False, True],
-         'n_estimators': [200],
-         'min_samples_split': [0.00001, 0.0001, 0.001],
-         'min_samples_leaf': [0.00001, 0.0001, 0.001],
-         'max_depth': [22],
-         'max_features': [0.01, 0.05, 0.1, 0.18, 0.2, 1]
-         }]
-    params_grid = [
-        {
-            'n_jobs': [-1],
-            'bootstrap': [False, True],
-            'n_estimators': [16, 100, 200],
-            'min_samples_split': [0.00001],
-            'min_samples_leaf': [0.00001],
-            'max_depth': [22],
-            'max_features': [0.001, 0.01, 0.18]
-        }
-    ]
-    grid_search = GridSearchCV(rf, params_grid, cv=10, scoring='accuracy',
-                               return_train_score=True, verbose=3)
-    grid_search.fit(data.train_set.dataset, data_labels.train_set.dataset)
-    end = time.time()
-    print("Took %s" % datetime.timedelta(seconds=(end - start)))
-    print("Best params: %s" % grid_search.best_params_)
-    print("Best score: %f" % grid_search.best_score_)
-    compare_classifier(grid_search)
