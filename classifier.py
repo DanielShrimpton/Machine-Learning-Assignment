@@ -1,4 +1,5 @@
 import datetime
+import sys
 import time
 from Class import ProcessData
 import pandas as pd
@@ -119,7 +120,7 @@ def process_data():
     _data.drop('date_submitted')
     _data.drop('is_banked')
     _data.label_encode('final_result', 'result')
-    length = len(_data.dataset.final_result)
+    # length = len(_data.dataset.final_result)
     # for i in range(length):
     #     if data.dataset.final_result.iat[i] == 'Withdrawn':
     #         data.dataset.result.iat[i] = 0
@@ -129,19 +130,14 @@ def process_data():
     #         data.dataset.result.iat[i] = 2
     #     elif data.dataset.final_result.iat[i] == 'Distinction':
     #         data.dataset.result.iat[i] = 3
-    _data.drop('final_result')
+    # _data.drop('final_result')
     _data.drop('code_module')
     _data.drop('code_presentation')
     _data.label_encode('region', 'region_')
-    _data.drop('region')
     _data.label_encode('imd_band', 'imd_band_')
-    _data.drop('imd_band')
     _data.label_encode('age_band', 'age_band_')
-    _data.drop('age_band')
     _data.label_encode('disability', 'disability_')
-    _data.drop('disability')
     _data.label_encode('gender', 'gender_')
-    _data.drop('gender')
     _data.drop('assessment_type')
     _data.label_encode('highest_education', 'highest_education_')
     # for i in range(length):
@@ -155,7 +151,7 @@ def process_data():
     #         data.dataset.highest_education_.iat[i] = 0
     # print(np.array(['No Formal quals', 'Lower Than A Level', 'A Level or Equivalent',
     #                 'HE Qualification', 'Post Graduate Qualification']))
-    _data.drop('highest_education')
+    # data.drop('highest_education')
     _data.drop('id_student')
     # _data.drop('id_assessment')
     # _data.info()
@@ -170,7 +166,143 @@ def process_data():
     return _data, _data_labels
 
 
-data, data_labels = process_data()
+def process_data2():
+    student_assessment = ProcessData(folder=FOLDER, filename="studentAssessment.csv")
+    assessments = ProcessData(folder=FOLDER, filename="assessments.csv")
+    student_info = ProcessData(folder=FOLDER, filename="studentInfo.csv")
+
+    data_ = ProcessData(data=[student_assessment.dataset.merge(assessments.dataset, how='left')],
+                        read=False)
+
+    data_ = ProcessData(data=[data_.dataset.merge(student_info.dataset, how='left').dropna(axis=0)],
+                        read=False)
+
+    data_.label_encode('code_module', 'code_module_', drop=False)
+    data_.label_encode('code_presentation', 'code_presentation_', drop=False)
+    data_.label_encode('assessment_type', 'assessment_type_')
+    data_.label_encode('gender', 'gender_')
+    data_.label_encode('region', 'region_')
+    data_.label_encode('highest_education', 'education')
+    data_.label_encode('imd_band', 'imd_band_')
+    data_.label_encode('disability', 'disability_')
+    data_.label_encode('age_band', 'age_band_')
+    data_.label_encode('final_result', 'result', drop=False)
+
+    data_ = ProcessData(data=[data_.dataset.query('final_result != "Withdrawn"').dropna(axis=0)],
+                        read=False)
+
+    print('id_student no dupes: ', len(data_.dataset[['id_student']].drop_duplicates()))
+    print('id_students to final result: ', len(data_.dataset[['id_student',
+                                                              'final_result']].drop_duplicates()))
+    print('id_student to assessment: ', len(data_.dataset[['id_student',
+                                                           'id_assessment']].drop_duplicates()))
+    print('id_student to code module: ', len(data_.dataset[['id_student',
+                                                            'code_module']].drop_duplicates()))
+    print('id_student to code_module to final_result: ',
+          len(data_.dataset[['id_student', 'code_module', 'final_result']].drop_duplicates()))
+
+    corr_mat = data_.corr()
+    print(corr_mat['result'].sort_values(ascending=False))
+    data_.dataset['id'] = data_.dataset['id_student'].astype(str) + data_.dataset['code_module']
+    data_.count('id')
+    print('id to id_assessment: ', len(data_.dataset[['id', 'id_assessment']].drop_duplicates()))
+    print('id_assessment to code module: ', len(data_.dataset[['id_assessment',
+                                                               'code_module']].drop_duplicates()))
+    print('dataset: ', len(data_.dataset))
+    print('id to final result: ', len(data_.dataset[['id', 'final_result']].drop_duplicates()))
+    data_.dataset['id_result'] = data_.dataset['id'] + data_.dataset['final_result']
+    data_.count('id_result')
+    print(len(data_.dataset[['id_student', 'code_presentation']].drop_duplicates()))
+    print(data_.dataset.query('id_result == "570213FFFFail"')[['id_result',
+                                                               'code_presentation']].drop_duplicates())
+    # data_.info()
+    # corr_mat = data_.corr()
+    # print(corr_mat['result'].sort_values(ascending=False))
+
+
+def data3():
+    student_assessment = ProcessData(folder=FOLDER, filename="studentAssessment.csv")
+    assessments = ProcessData(folder=FOLDER, filename="assessments.csv")
+    student_info = ProcessData(folder=FOLDER, filename="studentInfo.csv")
+
+    student_info.info()
+    student_assessment.info()
+    assessments.info()
+
+    print(len(student_info.dataset[['id_student', 'code_presentation',
+                                    'final_result']].drop_duplicates()),
+          len(student_info.dataset[['id_student', 'code_presentation', 'final_result']]))
+
+    # Unique entries are id_student + code_presentation + final_result
+    data_ = ProcessData(data=[student_info.dataset.query('final_result != "Withdrawn"')],
+                        read=False)
+    data_.dataset['id'] = data_.dataset['id_student'].astype(str) + data_.dataset[
+        'code_presentation'] + data_.dataset['final_result']
+    data_.count('id')
+
+    data2 = ProcessData(data=[student_assessment.dataset.merge(assessments.dataset, how='left')],
+                        read=False)
+
+    data2 = ProcessData(data=[data2.dataset.merge(student_info.dataset, how='left')], read=False)
+    data2 = ProcessData(data=[data2.dataset.query('final_result != "Withdrawn"').dropna()],
+                        read=False)
+
+    print(len(data2.dataset[['id_student', 'code_presentation', 'final_result']].drop_duplicates()))
+    print(len(data2.dataset[['id_student', 'code_presentation', 'final_result',
+                             'score']].drop_duplicates()),
+          len(data2.dataset[['id_student', 'code_presentation', 'final_result', 'score']]))
+
+    data2.label_encode('final_result', 'result', drop=False)
+    data2.label_encode('code_presentation', 'code_presentation_', drop=False)
+    data2.label_encode('code_module', 'code_module_')
+    data2.label_encode('assessment_type', 'assess_type')
+    data2.label_encode('gender', 'gender_')
+    data2.label_encode('region', 'region_')
+    data2.label_encode('highest_education', 'edu')
+    data2.label_encode('imd_band', 'imd_band_')
+    data2.label_encode('age_band', 'age_band_')
+    data2.label_encode('disability', 'disability_')
+
+    data2.info()
+
+    grouped = data_.dataset.groupby(['id_student', 'code_presentation', 'final_result'])
+    print(grouped.first())
+
+    grouped2 = data2.dataset.groupby(['id_student', 'code_presentation', 'final_result'])
+    print(grouped2.first())
+
+    print(grouped2.count())
+    print(grouped2['score'].sum())
+    print(grouped2.get_group((6516, '2014J', 'Pass'))['id_assessment'].value_counts())
+    print(grouped2.get_group((6516, '2014J', 'Pass'))['studied_credits'])
+    print(grouped2.get_group((2698251, '2014B', 'Fail'))[['code_module_', 'id_assessment',
+                                                          'weight']])
+    ting = grouped2.first()
+    ting['score'] = grouped2['score'].sum()
+    ting['weight'] = grouped2['weight'].sum()
+    print(ting['score'])
+    print(ting['weight'])
+    print(ting['num_of_prev_attempts'])
+    # sys.exit()
+
+    thingy = ProcessData(data=[ting], read=False)
+    thingy.info()
+    corr_mat = thingy.corr()
+    print(corr_mat['result'].sort_values(ascending=False))
+
+    thingy.test_train_split()
+
+    _data_labels = ProcessData(read=False, tt=True, data=[thingy.dataset['result'],
+                                                          thingy.train_set.dataset['result'],
+                                                          thingy.test_set.dataset['result']])
+    thingy.drop('result')
+    return thingy, _data_labels
+
+
+data, data_labels = data3()
+# sys.exit()
+"""process_data2(); sys.exit()
+data, data_labels = process_data()"""
 end = time.time()
 elapsed = datetime.timedelta(seconds=(end - start))
 print("Data Processing Done! Took %s" % elapsed)
