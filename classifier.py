@@ -447,30 +447,57 @@ def hyper_forest_stuff():
 
 
 def plot_testing(train_results, test_results, train_rmses, test_rmses, times, array, fname, aname):
-    fig, ax1 = plt.subplots()
+    # fig, ax1 = plt.subplots()
+    #
+    # ax1.set_xlabel(aname)
+    # ax1.set_ylabel('Accuracy Score')
+    #
+    # line1 = ax1.plot(array, train_results, 'b', label="Train Accuracy")
+    # line4 = ax1.plot(array, train_rmses, 'black', label="Train RMSE")
+    # line2 = ax1.plot(array, test_results, 'r', label="Test Accuracy")
+    # line5 = ax1.plot(array, test_rmses, 'green', label="Test RMSE")
+    #
+    # ax1.tick_params(axis='y')
+    #
+    # ax2 = ax1.twinx()
+    # ax2.set_ylabel('Time taken (s)')
+    # ax2.set_ylim([0, max(times) + 2])
+    # line3 = ax2.plot(array, times, label='Time')
+    # ax2.tick_params(axis='y')
+    #
+    # fig.tight_layout()
+    # lines = line1 + line2 + line3 + line4 + line5
+    # labels = [lab.get_label() for lab in lines]
+    # plt.legend(lines, labels, loc='upper left')
+    # plt.savefig('figs/' + fname + '-new.png')
+    # plt.show()
+
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
 
     ax1.set_xlabel(aname)
     ax1.set_ylabel('Accuracy Score')
 
-    line1 = ax1.plot(array, train_results, 'b', label="Train Accuracy")
-    line4 = ax1.plot(array, train_rmses, 'black', label="Train RMSE")
-    line2 = ax1.plot(array, test_results, 'r', label="Test Accuracy")
-    line5 = ax1.plot(array, test_rmses, 'green', label="Test RMSE")
+    ax1.scatter(array, train_results, c='b', label="Train Accuracy", s=2)
+    ax1.scatter(array, train_rmses, c='black', label="Train RMSE", s=2)
+    ax1.scatter(array, test_results, c='r', label="Test Accuracy", s=2)
+    ax1.scatter(array, test_rmses, c='green', label="Test RMSE", s=2)
 
     ax1.tick_params(axis='y')
+    plt.legend(loc='upper left')
 
     ax2 = ax1.twinx()
     ax2.set_ylabel('Time taken (s)')
     ax2.set_ylim([0, max(times) + 2])
-    line3 = ax2.plot(array, times, label='Time')
+    ax2.scatter(array, times, label='Time', s=2)
     ax2.tick_params(axis='y')
 
     fig.tight_layout()
-    lines = line1 + line2 + line3 + line4 + line5
-    labels = [lab.get_label() for lab in lines]
-    plt.legend(lines, labels, loc='upper left')
-    plt.savefig('figs/' + fname + '.png')
-    plt.show()
+    # labels = [lab.get_label() for lab in lines]
+    # plt.legend(lines, labels, loc='upper left')
+    plt.legend(loc='upper left')
+    plt.savefig('figs/' + fname + '-new.png', dpi=1200)
+    plt.show(dpi=1200)
 
 
 def plot_fitting(classy):
@@ -488,7 +515,7 @@ def plot_fitting(classy):
 
 def plot_n_estimators():
     print("--- n_estimators plotting ---")
-    n_estimators = [32, 64, 100, 200, 300, 400, 500]
+    n_estimators = [1, 4, 8, 16, 32, 64]
     train_results = []
     train_rmses = []
     test_results = []
@@ -564,6 +591,7 @@ def plot_min_samples_split():
 
 def plot_min_samples_leaf():
     min_samples_leafs = np.linspace(0.0001, 0.002, 20, endpoint=True)
+    min_samples_leafs = [0.00001, 0.0001, 0.001, 0.0015, 0.002, 0.01, 0.1, 0.5, 1]
 
     train_results = []
     train_rmses = []
@@ -588,6 +616,8 @@ def plot_min_samples_leaf():
 
 def plot_max_features():
     max_features = np.linspace(0.01, 0.2, 10, endpoint=True)
+    max_features = [0.01, 0.03, 0.05, 0.07, 0.1, 0.15, 0.2, 0.5, 1, 5, 10,
+                    len(data.dataset.columns)]
 
     train_results = []
     train_rmses = []
@@ -694,7 +724,11 @@ def tuned_rf():
 
     rf = RandomForestClassifier(bootstrap=False, max_depth=22, max_features=0.01,
                                 min_samples_leaf=0.000001, min_samples_split=0.000001,
-                                n_estimators=200, n_jobs=-1)
+                                n_estimators=200, n_jobs=-1, class_weight='balanced')
+
+    rf = RandomForestClassifier(bootstrap=True, max_depth=27, max_features=7,
+                                min_samples_leaf=0.00001, min_samples_split=0.002,
+                                n_estimators=1000, n_jobs=-1, class_weight=None)
     rf.fit(data.train_set.dataset, data_labels.train_set.dataset)
     end = time.time()
     print("Time to fit: %s" % datetime.timedelta(seconds=(end - start)))
