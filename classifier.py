@@ -11,7 +11,7 @@ from sklearn.model_selection import cross_val_score, GridSearchCV, RandomizedSea
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, accuracy_score, confusion_matrix, \
-    classification_report, max_error
+    classification_report, max_error, balanced_accuracy_score
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.externals import joblib
@@ -252,7 +252,8 @@ def data3():
                              'score']].drop_duplicates()),
           len(data2.dataset[['id_student', 'code_presentation', 'final_result', 'score']]))
 
-    data2.label_encode('final_result', 'result', drop=False)
+    # data2.label_encode('final_result', 'result', drop=False)
+    data2.dataset['result'] = data2.dataset['final_result']
     data2.label_encode('code_presentation', 'code_presentation_', drop=False)
     data2.label_encode('code_module', 'code_module_')
     data2.label_encode('assessment_type', 'assess_type')
@@ -288,8 +289,8 @@ def data3():
 
     thingy = ProcessData(data=[ting], read=False)
     thingy.info()
-    corr_mat = thingy.corr()
-    print(corr_mat['result'].sort_values(ascending=False))
+    # corr_mat = thingy.corr()
+    # print(corr_mat['result'].sort_values(ascending=False))
 
     thingy.test_train_split()
 
@@ -675,14 +676,16 @@ def compare_classifier(class_):
     train_labels = data_labels.train_set.dataset
     train_preds = class_.predict(train)
     train_accuracy = accuracy_score(train_labels, train_preds)
-    train_mse = mean_squared_error(train_labels, train_preds)
-    train_rmse = np.sqrt(train_mse)
-    train_max_error = max_error(train_labels, train_preds)
+    train_balanced_accuracy = balanced_accuracy_score(train_labels, train_preds)
+    # train_mse = mean_squared_error(train_labels, train_preds)
+    # train_rmse = np.sqrt(train_mse)
+    # train_max_error = max_error(train_labels, train_preds)
     # train_confusion = confusion_matrix(train_labels, train_preds)
     print("Train Accuracy:  %.2f %%" % (train_accuracy * 100.0))
-    print("Train MSE:       %.4f" % train_mse)
-    print("Train RMSE:      %.4f" % train_rmse)
-    print("Train Max Error: %.2f" % train_max_error)
+    print("Train Balanced Accuracy: %.2f %%" % (train_balanced_accuracy * 100.0))
+    # print("Train MSE:       %.4f" % train_mse)
+    # print("Train RMSE:      %.4f" % train_rmse)
+    # print("Train Max Error: %.2f" % train_max_error)
     # print(train_confusion)
     print("Train report:")
     print(classification_report(train_labels, train_preds))
@@ -693,14 +696,16 @@ def compare_classifier(class_):
     _test_labels = data_labels.test_set.dataset
     test_preds = class_.predict(_test)
     test_accuracy = accuracy_score(_test_labels, test_preds)
-    test_mse = mean_squared_error(_test_labels, test_preds)
-    test_rmse = np.sqrt(test_mse)
-    test_max_error = max_error(_test_labels, test_preds)
+    test_balanced_accuracy = balanced_accuracy_score(_test_labels, test_preds)
+    # test_mse = mean_squared_error(_test_labels, test_preds)
+    # test_rmse = np.sqrt(test_mse)
+    # test_max_error = max_error(_test_labels, test_preds)
     # test_confusion = confusion_matrix(_test_labels, test_preds)
     print("Test Accuracy:   %.2f%%" % (test_accuracy * 100.0))
-    print("Test MSE:        %.4f" % test_mse)
-    print("Test RMSE:       %.4f" % test_rmse)
-    print("Test Max Error: %.2f" % test_max_error)
+    print("Test Balanced Accuracy: %.2f %%" % (test_balanced_accuracy * 100.0))
+    # print("Test MSE:        %.4f" % test_mse)
+    # print("Test RMSE:       %.4f" % test_rmse)
+    # print("Test Max Error: %.2f" % test_max_error)
     # print(test_confusion)
     print("Test report:")
     print(classification_report(_test_labels, test_preds))
@@ -988,6 +993,37 @@ def plot_min_samples_split_dt():
 # plot_min_samples_split_dt()
 
 
+def random_search_cv_dt():
+    start_ = time.time()
+    params_grid = [
+        {
+            'criterion': ['gini', 'entropy'],
+            'splitter': ['best', 'random'],
+            'max_depth': [1, 2, 8, 26, 64, 100, 500, None],
+            'min_samples_split': [0.1, 0.5, 0.9, 1.0, 2, 7, 8, 9, 10],
+            'min_samples_leaf': [0.001, 0.01, 0.1, 1, 2, 8, 20],
+            'max_features': [0.001, 1, 8, 17, 'sqrt', 'log2', None],
+            'max_leaf_nodes': [None, 2, 5, 10, 64, 100],
+            'random_state': [42],
+            'class_weight': [None, 'balanced']
+        }
+    ]
+    dt = DecisionTreeClassifier()
+    k = StratifiedKFold(n_splits=10)
+    rand_search = RandomizedSearchCV(dt, params_grid, cv=k, scoring='accuracy',
+                                     return_train_score=True, verbose=3, n_jobs=-1, n_iter=50000)
+    rand_search.fit(data.train_set.dataset, data_labels.train_set.dataset)
+    end_ = time.time()
+    print("Took %s" % datetime.timedelta(seconds=(end_ - start_)))
+    print("Best params: %s" % rand_search.best_params_)
+    print("Best score: %f" % rand_search.best_score_)
+    compare_classifier(rand_search)
+    return rand_search
+
+
+random_dt = random_search_cv_dt()
+
+
 def hyper_dt():
     start_ = time.time()
     # params_grid = [
@@ -1032,13 +1068,16 @@ def hyper_dt():
 
 def tuned_dt():
     start_ = time.time()
-    dt = DecisionTreeClassifier(max_depth=26, max_features=17, max_leaf_nodes=None,
-                                min_samples_leaf=20, min_samples_split=7, random_state=42,
-                                splitter='best')
+    # dt = DecisionTreeClassifier(max_depth=26, max_features=17, max_leaf_nodes=None,
+    #                             min_samples_leaf=20, min_samples_split=7, random_state=42,
+    #                             splitter='best')
+    dt = DecisionTreeClassifier(splitter='best', random_state=42, min_samples_split=9,
+                                min_samples_leaf=8, max_leaf_nodes=64, max_features=17,
+                                max_depth=26, criterion='gini', class_weight=None)
     dt.fit(data.train_set.dataset, data_labels.train_set.dataset)
     end_ = time.time()
     print("Time to fit: %s" % datetime.timedelta(seconds=(end_ - start_)))
     compare_classifier(dt)
 
 
-tuned_rf()
+# tuned_dt()
