@@ -7,7 +7,7 @@ from pandas.plotting import scatter_matrix
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_val_score, GridSearchCV, RandomizedSearchCV, \
-    StratifiedKFold
+    StratifiedKFold, validation_curve
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, accuracy_score, confusion_matrix, \
@@ -16,6 +16,7 @@ from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.externals import joblib
 from mpl_toolkits.mplot3d import Axes3D
+import numbers
 
 start = time.time()
 
@@ -486,7 +487,7 @@ def plot_testing(train_results, test_results, train_rmses, test_rmses, times, ar
     ax1.scatter(array, test_rmses, c='green', label="Test RMSE", s=2)
 
     ax1.tick_params(axis='y')
-    plt.legend(loc='upper left')
+    plt.legend(loc='best')
 
     ax2 = ax1.twinx()
     ax2.set_ylabel('Time taken (s)')
@@ -497,7 +498,7 @@ def plot_testing(train_results, test_results, train_rmses, test_rmses, times, ar
     fig.tight_layout()
     # labels = [lab.get_label() for lab in lines]
     # plt.legend(lines, labels, loc='upper left')
-    plt.legend(loc='upper left')
+    plt.legend(loc='best')
     plt.savefig('figs/' + fname + '-new.png', dpi=1200)
     plt.show(dpi=1200)
 
@@ -878,6 +879,70 @@ def randomized_search_cv_rf():
 # rand = randomized_search_cv_rf()
 
 
+def plot_search_validation_curve(grid, param_name, title='Validation Curve', log=None):
+    df_cv_results = pd.DataFrame(grid.cv_results_)
+    param_grid_df = pd.DataFrame(grid.param_grid)
+    train_scores_mean = df_cv_results['mean_train_score']
+    valid_scores_mean = df_cv_results['mean_test_score']
+    train_scores_std = df_cv_results['std_train_score']
+    valid_scores_std = df_cv_results['std_test_score']
+
+    param_cols = [c for c in df_cv_results.columns if c[:6] == 'param_']
+    param_ranges = [param_grid_df[p[6:]].values.tolist()[0] for p in param_cols]
+    param_ranges_length = [len(pr) for pr in param_ranges]
+
+    train_scores_mean = np.array(train_scores_mean).reshape(*param_ranges_length)
+    valid_scores_mean = np.array(valid_scores_mean).reshape(*param_ranges_length)
+    train_scores_std = np.array(train_scores_std).reshape(*param_ranges_length)
+    valid_scores_std = np.array(valid_scores_std).reshape(*param_ranges_length)
+
+    param_name_idx = param_cols.index('param_{}'.format(param_name))
+
+    slices = []
+    for idx, param in enumerate(grid.best_params_):
+        if idx == param_name_idx:
+            slices.append(slice(None))
+            continue
+        best_param_val = grid.best_params_[param]
+        if isinstance(param_ranges[idx], np.ndarray):
+            idx_of_best_param = param_ranges[idx].tolist().index(best_param_val)
+        else:
+            idx_of_best_param = param_ranges[idx].index(best_param_val)
+        slices.append(idx_of_best_param)
+
+    train_scores_mean = train_scores_mean[tuple(slices)]
+    valid_scores_mean = valid_scores_mean[tuple(slices)]
+    train_scores_std = train_scores_std[tuple(slices)]
+    valid_scores_std = valid_scores_std[tuple(slices)]
+
+    plt.clf()
+
+    plt.title(title)
+    plt.xlabel(param_name)
+    plt.ylabel('score')
+
+    lw = 2
+
+    plot_fn = plt.plot
+    if log:
+        plot_fn = plt.semilogx
+
+    param_range = param_ranges[param_name_idx]
+    if not isinstance(param_range[0], numbers.Number):
+        param_range = [str(x) for x in param_range]
+    plot_fn(param_range, train_scores_mean, label='Training Score', color='darkorange', lw=lw)
+    plt.fill_between(param_range, train_scores_mean - train_scores_std, train_scores_mean +
+                     train_scores_std, alpha=0.2, color='darkorange', lw=lw)
+    plot_fn(param_range, valid_scores_mean, label='CV Score', color='navy', lw=lw)
+    plt.fill_between(param_range, valid_scores_mean - valid_scores_std, valid_scores_mean +
+                     valid_scores_std, alpha=0.2, color='navy', lw=lw)
+    plt.legend(loc='best')
+
+    plt.savefig('figs/' + title + ' ' + param_name + '.png', dpi=1200)
+    plt.show()
+    plt.close()
+
+
 def decision_tree_class():
     start_ = time.time()
     dt = DecisionTreeClassifier(max_depth=26, max_features=0.001, min_samples_leaf=1,
@@ -1081,3 +1146,37 @@ def tuned_dt():
 
 
 # tuned_dt()
+
+def validation_curve_rf():
+    param_name = 'max_features'
+    param_range = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    rf = RandomForestClassifier(bootstrap=True, max_depth=25,
+                                min_samples_leaf=0.00001, min_samples_split=0.002,
+                                n_estimators=1000, n_jobs=-1, class_weight=None)
+
+    train_scores, test_scores = validation_curve(rf,
+                                                 data.train_set.dataset,
+                                                 data_labels.train_set.dataset,
+                                                 param_name=param_name,
+                                                 param_range=param_range,
+                                                 scoring='accuracy', n_jobs=-1)
+
+    train_mean = np.mean(train_scores, axis=1)
+    train_std = np.std(train_scores, axis=1)
+    test_mean = np.mean(test_scores, axis=1)
+    test_std = np.std(test_scores, axis=1)
+
+    plt.title('Validation curve with RF')
+    plt.ylabel('Score')
+    plt.xlabel(param_name)
+    plt.plot(param_range, train_mean, label='Training Score', color='darkorange', lw=2)
+    plt.fill_between(param_range, train_mean - train_std, train_mean + train_std, alpha=0.2,
+                     color='darkorange', lw=2)
+    plt.plot(param_range, test_mean, label='Test Score', color='navy', lw=2)
+    plt.fill_between(param_range, test_mean - test_std, test_mean + test_std, alpha=0.2,
+                     color='navy', lw=2)
+    plt.legend(loc='best')
+    plt.show()
+
+
+# validation_curve_rf()
