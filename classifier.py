@@ -302,7 +302,48 @@ def data3():
     return thingy, _data_labels
 
 
-data, data_labels = data3()
+def data_one_hot():
+    student_assessment = ProcessData(folder=FOLDER, filename="studentAssessment.csv")
+    assessments = ProcessData(folder=FOLDER, filename="assessments.csv")
+    student_info = ProcessData(folder=FOLDER, filename="studentInfo.csv")
+
+    data_ = ProcessData(data=[student_assessment.dataset.merge(assessments.dataset, how='left')],
+                        read=False)
+    data_ = ProcessData(data=[data_.dataset.merge(student_info.dataset, how='left')], read=False)
+    data_.info()
+    # sys.exit()
+    data_.dataset['presentation'] = data_.dataset['code_presentation']
+    data_.dataset['result'] = data_.dataset['final_result']
+    encoded = pd.get_dummies(data_.dataset, columns=['age_band', 'imd_band', 'highest_education',
+                                                     'gender', 'region', 'assessment_type',
+                                                     'code_module', 'code_presentation',
+                                                     'id_assessment'])
+    data_ = ProcessData(data=[encoded], read=False)
+    data_.label_encode('disability', 'disability_')
+    data_ = ProcessData(data=[data_.dataset.query('final_result != "Withdrawn"').dropna()],
+                        read=False)
+    data_.info()
+
+    data_.dataset['result'] = data_.dataset['final_result']
+    grouped = data_.dataset.groupby(['id_student', 'presentation', 'final_result'])
+    compact = grouped.first()
+    compact['score'] = grouped['score'].sum()
+    compact['weight'] = grouped['weight'].sum()
+
+    data_ = ProcessData(data=[compact], read=False)
+    data_.info()
+
+    data_.test_train_split()
+
+    _data_labels = ProcessData(read=False, tt=True, data=[data_.dataset['result'],
+                                                          data_.train_set.dataset['result'],
+                                                          data_.test_set.dataset['result']])
+    data_.drop('result')
+    return data_, _data_labels
+
+
+data, data_labels = data_one_hot()
+# data, data_labels = data3()
 # sys.exit()
 """process_data2(); sys.exit()
 data, data_labels = process_data()"""
