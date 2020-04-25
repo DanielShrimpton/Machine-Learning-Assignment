@@ -778,8 +778,8 @@ def tuned_rf():
     #                             min_samples_leaf=0.000001, min_samples_split=0.000001,
     #                             n_estimators=200, n_jobs=-1, class_weight='balanced')
 
-    rf = RandomForestClassifier(bootstrap=True, max_depth=25, max_features=6,
-                                min_samples_leaf=0.00001, min_samples_split=0.002,
+    rf = RandomForestClassifier(bootstrap=True, max_depth=50, max_features=150,
+                                min_samples_leaf=0.001, min_samples_split=0.0005,
                                 n_estimators=1000, n_jobs=-1, class_weight=None)
     rf.fit(data.train_set.dataset, data_labels.train_set.dataset)
     end_ = time.time()
@@ -830,6 +830,45 @@ def new_grid(id_):
                 'n_jobs': [-1]
             }
         ]
+    elif id_ == 5:
+        params_grid = [
+            {
+                'bootstrap': [True, False],
+                'class_weight': ['balanced', None],
+                'max_depth': [26],
+                'max_features': [10, 17, 32, 64, len(data.dataset.columns)],
+                'min_samples_leaf': [0.00001, 0.0005, 0.001, 0.1],
+                'min_samples_split': [0.0005, 0.001, 1.0],
+                'n_estimators': [200, 500],
+                'n_jobs': [-1]
+            }
+        ]
+    elif id_ == 6:
+        params_grid = [
+            {
+                'bootstrap': [True],
+                'class_weight': [None],
+                'max_depth': [26],
+                'max_features': [10, 50, 75, 100, 150, 175, 200, len(data.dataset.columns)],
+                'min_samples_leaf': [0.001],
+                'min_samples_split': [0.0005],
+                'n_estimators': [10, 50, 100, 200, 400, 600, 1000, 1500],
+                'n_jobs': [-1]
+            }
+        ]
+    elif id_ == 7:
+        params_grid = [
+            {
+                'bootstrap': [True],
+                'class_weight': [None],
+                'max_depth': [None, 1, 5, 8, 10, 15, 20, 22, 26, 30, 50, 100, 1000],
+                'max_features': [150, len(data.dataset.columns)],
+                'min_samples_leaf': [0.001],
+                'min_samples_split': [0.0005],
+                'n_estimators': [400],
+                'n_jobs': [-1]
+            }
+        ]
     else:
         # params_grid = [
         #     {'n_jobs': [-1],
@@ -868,7 +907,7 @@ def new_grid(id_):
     start_ = time.time()
     rf = RandomForestClassifier()
 
-    grid_search = GridSearchCV(rf, params_grid, cv=10, scoring='accuracy',
+    grid_search = GridSearchCV(rf, params_grid, cv=7, scoring='accuracy',
                                return_train_score=True, verbose=3, n_jobs=-1)
     grid_search.fit(data.train_set.dataset, data_labels.train_set.dataset)
     end_ = time.time()
@@ -883,7 +922,9 @@ def new_grid(id_):
 # grid_searcher2 = new_grid(2)
 # grid_searcher3 = new_grid(3)
 # grid_searcher4 = new_grid(4)
-
+# grid_searcher5 = new_grid(5)
+# grid_searcher6 = new_grid(6)
+grid_searcher7 = new_grid(7)
 
 def randomized_search_cv_rf():
     start_ = time.time()
@@ -893,19 +934,19 @@ def randomized_search_cv_rf():
         {
             'bootstrap': [True, False],
             'class_weight': [None, 'balanced'],
-            'max_depth': np.linspace(20, 30, 11, endpoint=True),
-            'max_features': [0.01, 0.1, 1.0, 4, 5, 6, 7, 8, 9, 10, 17],
+            'max_depth': list(range(1, 33)),
+            'max_features': [0.01, 0.1, 1.0, ] + list(range(2, len(data.dataset.columns) + 1)),
             'min_samples_leaf': [0.00001, 0.00002, 0.0001, 0.001, 0.01, 0.1],
             'min_samples_split': [0.002, 0.005, 0.01, 0.1],
-            'n_estimators': [1, 16, 32, 64, 200, 500, 1000],
+            'n_estimators': [1, 16, 32, 64, 200, 300, 500, 700, 1000],
             'n_jobs': [-1]
         }
     ]
 
-    k = StratifiedKFold(n_splits=10)
+    k = StratifiedKFold(n_splits=7)
 
     randomized = RandomizedSearchCV(rf, params_grid, cv=k, scoring='accuracy',
-                                    return_train_score=True, verbose=3, n_jobs=-1, n_iter=120)
+                                    return_train_score=True, verbose=3, n_jobs=-1, n_iter=10)
     randomized.fit(data.train_set.dataset, data_labels.train_set.dataset)
     end_ = time.time()
     print("Took %s" % datetime.timedelta(seconds=(end_ - start_)))
@@ -1127,7 +1168,7 @@ def random_search_cv_dt():
     return rand_search
 
 
-random_dt = random_search_cv_dt()
+# random_dt = random_search_cv_dt()
 
 
 def hyper_dt():
