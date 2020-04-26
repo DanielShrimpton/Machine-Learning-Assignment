@@ -1,3 +1,4 @@
+import os
 import datetime
 import sys
 import time
@@ -778,9 +779,9 @@ def tuned_rf():
     #                             min_samples_leaf=0.000001, min_samples_split=0.000001,
     #                             n_estimators=200, n_jobs=-1, class_weight='balanced')
 
-    rf = RandomForestClassifier(bootstrap=True, max_depth=50, max_features=150,
-                                min_samples_leaf=0.001, min_samples_split=0.0005,
-                                n_estimators=1000, n_jobs=-1, class_weight=None)
+    rf = RandomForestClassifier(bootstrap=True, max_depth=55, max_features=135,
+                                min_samples_leaf=0.0005, min_samples_split=0.0005,
+                                n_estimators=500, n_jobs=-1, class_weight=None, criterion='gini')
     rf.fit(data.train_set.dataset, data_labels.train_set.dataset)
     end_ = time.time()
     print("Time to fit: %s" % datetime.timedelta(seconds=(end_ - start_)))
@@ -869,6 +870,34 @@ def new_grid(id_):
                 'n_jobs': [-1]
             }
         ]
+    elif id_ == 8:
+        params_grid = [
+            {
+                'criterion': ['gini', 'entropy'],
+                'bootstrap': [True],
+                'class_weight': [None],
+                'max_depth': [40, 45, 50, 55, 60],
+                'max_features': [1, 150, len(data.dataset.columns)],
+                'min_samples_leaf': [0.00001, 0.0001, 0.001, 0.01, 0.1],
+                'min_samples_split': [0.00001, 0.0001, 0.0005, 0.001, 0.01, 0.1],
+                'n_estimators': [500],
+                'n_jobs': [-1]
+            }
+        ]
+    elif id_ == 9:
+        params_grid = [
+            {
+                'criterion': ['gini'],
+                'bootstrap': [True],
+                'class_weight': [None],
+                'max_depth': [55],
+                'max_features': [100, 110, 125, 135, 150, 160, 180],
+                'min_samples_leaf': [0.0005, 0.001],
+                'min_samples_split': [0.0005],
+                'n_estimators': [500],
+                'n_jobs': [-1]
+            }
+        ]
     else:
         # params_grid = [
         #     {'n_jobs': [-1],
@@ -891,14 +920,27 @@ def new_grid(id_):
         #     }
         # ]
 
+        # params_grid = [
+        #     {
+        #         'bootstrap': [True],
+        #         'class_weight': ['balanced', None],
+        #         'max_depth': [26],
+        #         'max_features': [10],
+        #         'min_samples_leaf': [0.00001, 0.0005, 0.001, 0.1, 1],
+        #         'min_samples_split': [0.0005, 0.001, 0.01, 0.1, 1.0],
+        #         'n_estimators': [200, 500],
+        #         'n_jobs': [-1]
+        #     }
+        # ]
+
         params_grid = [
             {
                 'bootstrap': [True],
                 'class_weight': ['balanced', None],
                 'max_depth': [26],
                 'max_features': [10],
-                'min_samples_leaf': [0.00001, 0.0005, 0.001, 0.1, 1],
-                'min_samples_split': [0.0005, 0.001, 0.01, 0.1, 1.0],
+                'min_samples_leaf': [0.00001],
+                'min_samples_split': [0.0005],
                 'n_estimators': [200, 500],
                 'n_jobs': [-1]
             }
@@ -907,7 +949,7 @@ def new_grid(id_):
     start_ = time.time()
     rf = RandomForestClassifier()
 
-    grid_search = GridSearchCV(rf, params_grid, cv=7, scoring='accuracy',
+    grid_search = GridSearchCV(rf, params_grid, cv=8, scoring='accuracy',
                                return_train_score=True, verbose=3, n_jobs=-1)
     grid_search.fit(data.train_set.dataset, data_labels.train_set.dataset)
     end_ = time.time()
@@ -915,6 +957,12 @@ def new_grid(id_):
     print("Best params: %s" % grid_search.best_params_)
     print("Best score: %f" % grid_search.best_score_)
     compare_classifier(grid_search)
+    time_ = datetime.datetime.now().strftime('%m-%d-%H.%M')
+    # for param_name in list(grid_search.param_grid[0].keys()):
+    #     plot_search_validation_curve(grid_search, param_name, time_=time_, type_='RF')
+    #     plot_search_validation_curve(grid_search, param_name, time_=time_, type_='RF', log=True)
+    plot_search_validation_curve(grid_search, time_=time_, type_='RF')
+    plot_search_validation_curve(grid_search, time_=time_, type_='RF', log=True)
     return grid_search
 
 
@@ -924,7 +972,11 @@ def new_grid(id_):
 # grid_searcher4 = new_grid(4)
 # grid_searcher5 = new_grid(5)
 # grid_searcher6 = new_grid(6)
-grid_searcher7 = new_grid(7)
+# grid_searcher7 = new_grid(7)
+# grid_searcher8 = new_grid(8)
+# grid_searcher9 = new_grid(9)
+# test = new_grid()
+
 
 def randomized_search_cv_rf():
     start_ = time.time()
