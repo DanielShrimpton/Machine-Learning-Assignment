@@ -788,16 +788,17 @@ def tuned_rf():
     #                             min_samples_leaf=0.000001, min_samples_split=0.000001,
     #                             n_estimators=200, n_jobs=-1, class_weight='balanced')
 
-    rf = RandomForestClassifier(bootstrap=True, max_depth=55, max_features=135,
-                                min_samples_leaf=0.0005, min_samples_split=0.0005,
-                                n_estimators=500, n_jobs=-1, class_weight=None, criterion='gini')
+    rf = RandomForestClassifier(bootstrap=True, max_depth=35,
+                                max_features=43, min_samples_leaf=0.0005,
+                                min_samples_split=0.0005, n_estimators=500, n_jobs=-1,
+                                class_weight=None, criterion='gini')
     rf.fit(data.train_set.dataset, data_labels.train_set.dataset)
     end_ = time.time()
     print("Time to fit: %s" % datetime.timedelta(seconds=(end_ - start_)))
     compare_classifier(rf)
 
 
-# tuned_rf()
+tuned_rf()
 
 
 def plot_search_validation_curve(grid, title_='Validation Curve', log=None,
@@ -992,6 +993,77 @@ def new_grid(id_=None):
                 'n_jobs': [-1]
             }
         ]
+    elif id_ == 10:
+        params_grid = [
+            {
+                'criterion': ['gini'],
+                'bootstrap': [True],
+                'class_weight': [None, 'balanced', 'balanced_subsample', {1: 2, 2: 1, 3: 4},
+                                 {1: 2.16, 2: 1, 3: 4.2}, {1: 2.2, 2: 1, 3: 5}],
+                'max_depth': [55],
+                'max_features': [len(data.dataset.columns)],
+                'min_samples_leaf': [0.0005],
+                'min_samples_split': [0.0005],
+                'n_estimators': [500],
+                'n_jobs': [-1]
+            }
+        ]
+    elif id_ == 11:
+        params_grid = [
+            {
+                'criterion': ['gini'],
+                'bootstrap': [True],
+                'class_weight': [None],
+                'max_depth': [None, 1, 3, 8, 10, 30, 55, 80, 100],
+                'max_features': [1, 5, 10, 50, 70, 100, len(data.dataset.columns)],
+                'min_samples_leaf': [0.0005],
+                'min_samples_split': [0.0005],
+                'n_estimators': [500],
+                'n_jobs': [-1]
+            }
+        ]
+    elif id_ == 12:
+        params_grid = [
+            {
+                'criterion': ['gini'],
+                'bootstrap': [True],
+                'class_weight': [None],
+                'max_depth': [25, 27, 29, 30, 31, 33, 35],
+                'max_features': [45, 47, 49, 50, 51, 53, 55],
+                'min_samples_leaf': [0.0005],
+                'min_samples_split': [0.0005],
+                'n_estimators': [500],
+                'n_jobs': [-1]
+            }
+        ]
+    elif id_ == 13:
+        params_grid = [
+            {
+                'criterion': ['gini'],
+                'bootstrap': [True],
+                'class_weight': [None],
+                'max_depth': [34, 35, 35, 37],
+                'max_features': [42, 43, 44, 45, 46, 47],
+                'min_samples_leaf': [0.0005],
+                'min_samples_split': [0.0005],
+                'n_estimators': [500],
+                'n_jobs': [-1]
+            }
+        ]
+    elif id_ == 14:
+        params_grid = [
+            {
+                'criterion': ['gini'],
+                'bootstrap': [True],
+                'class_weight': [None],
+                'max_depth': [35],
+                'max_features': [43],
+                'min_samples_leaf': [0.000001, 0.00001, 0.0001, 0.0005, 0.001, 0.01, 0.1, 1],
+                'min_samples_split': [0.000001, 0.00001, 0.0001, 0.0005, 0.001, 0.01, 0.1, 1.0],
+                'n_estimators': [500],
+                'n_jobs': [-1]
+            }
+        ]
     else:
         # params_grid = [
         #     {'n_jobs': [-1],
@@ -1042,8 +1114,8 @@ def new_grid(id_=None):
 
     start_ = time.time()
     rf = RandomForestClassifier()
-
-    grid_search = GridSearchCV(rf, params_grid, cv=8, scoring='accuracy',
+    k = StratifiedKFold(n_splits=8)
+    grid_search = GridSearchCV(rf, params_grid, cv=k, scoring='f1_weighted',
                                return_train_score=True, verbose=3, n_jobs=-1)
     grid_search.fit(data.train_set.dataset, data_labels.train_set.dataset)
     end_ = time.time()
@@ -1052,9 +1124,6 @@ def new_grid(id_=None):
     print("Best score: %f" % grid_search.best_score_)
     compare_classifier(grid_search)
     time_ = datetime.datetime.now().strftime('%m-%d-%H.%M')
-    # for param_name in list(grid_search.param_grid[0].keys()):
-    #     plot_search_validation_curve(grid_search, param_name, time_=time_, type_='RF')
-    #     plot_search_validation_curve(grid_search, param_name, time_=time_, type_='RF', log=True)
     plot_search_validation_curve(grid_search, time_=time_, type_='RF')
     plot_search_validation_curve(grid_search, time_=time_, type_='RF', log=True)
     return grid_search
@@ -1069,6 +1138,11 @@ def new_grid(id_=None):
 # grid_searcher7 = new_grid(7)
 # grid_searcher8 = new_grid(8)
 # grid_searcher9 = new_grid(9)
+# grid_searcher10 = new_grid(10)
+# grid_searcher11 = new_grid(11)
+# grid_searcher12 = new_grid(12)
+# grid_searcher13 = new_grid(13)
+grid_searcher14 = new_grid(14)
 # test = new_grid()
 
 
@@ -1267,20 +1341,32 @@ def hyper_dt():
     #     }
     # ]
 
+    # params_grid = [
+    #     {
+    #         'max_depth': [None, 1, 2, 8, 26, 50, 100, 200],
+    #         'max_features': [0.001, 1, 8, 17, 50, 100, 150, 200, len(data.dataset.columns)],
+    #         'max_leaf_nodes': [None, 2, 5, 10],
+    #         'min_samples_leaf': [0.001, 1, 2, 8, 20],
+    #         'min_samples_split': [0.0001, 0.0005, 0.001, 0.01, 0.1, 1.0, 5, 10, 20, 50],
+    #         'random_state': [42],
+    #         'splitter': ['best', 'random']
+    #     }
+    # ]
+
     params_grid = [
         {
-            'splitter': ['best', 'random'],
-            'max_depth': [1, 2, 8, 26],
-            'min_samples_split': [7, 8, 9, 10],
-            'min_samples_leaf': [0.001, 1, 2, 8, 20],
-            'max_features': [0.001, 1, 8, 17],
-            'max_leaf_nodes': [None, 2, 5, 10],
-            'random_state': [42]
+            'max_depth': [None],
+            'max_features': [len(data.dataset.columns)],
+            'max_leaf_nodes': [None, 25, 50, 75, 100, 200, 500, 1000],
+            'min_samples_leaf': [0.001, 20, 30, 50, 100],
+            'min_samples_split': [0.01, 50, 100],
+            'random_state': [42],
+            'splitter': ['best']
         }
     ]
 
     dt = DecisionTreeClassifier()
-    k = StratifiedKFold(n_splits=10)
+    k = StratifiedKFold(n_splits=8)
     grid_search = GridSearchCV(dt, params_grid, cv=k, scoring='accuracy',
                                return_train_score=True, verbose=3, n_jobs=-1)
     grid_search.fit(data.train_set.dataset, data_labels.train_set.dataset)
@@ -1289,6 +1375,9 @@ def hyper_dt():
     print("Best params: %s" % grid_search.best_params_)
     print("Best score: %f" % grid_search.best_score_)
     compare_classifier(grid_search)
+    time_ = datetime.datetime.now().strftime('%m-%d-%H.%M')
+    plot_search_validation_curve(grid_search, time_=time_, type_='DT')
+    plot_search_validation_curve(grid_search, time_=time_, type_='DT', log=True)
     return grid_search
 
 
@@ -1300,9 +1389,12 @@ def tuned_dt():
     # dt = DecisionTreeClassifier(max_depth=26, max_features=17, max_leaf_nodes=None,
     #                             min_samples_leaf=20, min_samples_split=7, random_state=42,
     #                             splitter='best')
-    dt = DecisionTreeClassifier(splitter='best', random_state=42, min_samples_split=9,
-                                min_samples_leaf=8, max_leaf_nodes=64, max_features=17,
-                                max_depth=26, criterion='gini', class_weight=None)
+    # dt = DecisionTreeClassifier(splitter='best', random_state=42, min_samples_split=9,
+    #                             min_samples_leaf=8, max_leaf_nodes=64, max_features=17,
+    #                             max_depth=26, criterion='gini', class_weight=None)
+    dt = DecisionTreeClassifier(max_depth=None, max_features=len(data.dataset.columns),
+                                max_leaf_nodes=None, min_samples_leaf=0.001,
+                                min_samples_split=50, random_state=42, splitter='best')
     dt.fit(data.train_set.dataset, data_labels.train_set.dataset)
     end_ = time.time()
     print("Time to fit: %s" % datetime.timedelta(seconds=(end_ - start_)))
@@ -1310,6 +1402,7 @@ def tuned_dt():
 
 
 # tuned_dt()
+
 
 def validation_curve_rf():
     param_name = 'max_features'
