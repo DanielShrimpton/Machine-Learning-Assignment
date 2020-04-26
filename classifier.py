@@ -788,10 +788,95 @@ def tuned_rf():
     compare_classifier(rf)
 
 
-tuned_rf()
+# tuned_rf()
 
 
-def new_grid(id_):
+def plot_search_validation_curve(grid, title_='Validation Curve', log=None,
+                                 time_=None, type_=''):
+
+    df_cv_results = pd.DataFrame(grid.cv_results_)
+    param_grid_df = pd.DataFrame(grid.param_grid)
+    train_mean = df_cv_results['mean_train_score']
+    valid_mean = df_cv_results['mean_test_score']
+    train_std = df_cv_results['std_train_score']
+    valid_std = df_cv_results['std_test_score']
+
+    param_cols = [c for c in df_cv_results.columns if c[:6] == 'param_']
+    param_ranges = [param_grid_df[p[6:]].values.tolist()[0] for p in param_cols]
+    param_ranges_length = [len(pr) for pr in param_ranges]
+
+    train_mean = np.array(train_mean).reshape(*param_ranges_length)
+    valid_mean = np.array(valid_mean).reshape(*param_ranges_length)
+    train_std = np.array(train_std).reshape(*param_ranges_length)
+    valid_std = np.array(valid_std).reshape(*param_ranges_length)
+
+    for p in param_cols:
+        param_name = p[6:]
+        param_name_idx = param_cols.index('param_{}'.format(param_name))
+        if int(param_ranges_length[param_name_idx]) < 2:
+            continue
+
+        if not time_:
+            time_ = datetime.datetime.now().strftime('%m-%d-%H.%M')
+        title = time_ + ' ' + type_ + ' ' + title_ + ' ' + param_name
+        if log:
+            title += ' log'
+
+        slices = []
+        for idx, param in enumerate(grid.best_params_):
+            if idx == param_name_idx:
+                slices.append(slice(None))
+                continue
+            best_param_val = grid.best_params_[param]
+            if isinstance(param_ranges[idx], np.ndarray):
+                idx_of_best_param = param_ranges[idx].tolist().index(best_param_val)
+            else:
+                idx_of_best_param = param_ranges[idx].index(best_param_val)
+            slices.append(idx_of_best_param)
+
+        train_scores_mean = train_mean[tuple(slices)]
+        valid_scores_mean = valid_mean[tuple(slices)]
+        train_scores_std = train_std[tuple(slices)]
+        valid_scores_std = valid_std[tuple(slices)]
+
+        plt.clf()
+
+        plt.title(title)
+        plt.xlabel(param_name)
+        plt.ylabel('score')
+
+        lw = 2
+
+        plot_fn = plt.plot
+        if log:
+            plot_fn = plt.semilogx
+
+        param_range = param_ranges[param_name_idx]
+        if not isinstance(param_range[0], numbers.Number):
+            param_range = [str(x) for x in param_range]
+        plot_fn(param_range, train_scores_mean, label='Training Score', color='darkorange', lw=lw)
+        plt.fill_between(param_range, train_scores_mean - train_scores_std, train_scores_mean +
+                         train_scores_std, alpha=0.2, color='darkorange', lw=lw)
+        plot_fn(param_range, valid_scores_mean, label='CV Score', color='navy', lw=lw)
+        plt.fill_between(param_range, valid_scores_mean - valid_scores_std, valid_scores_mean +
+                         valid_scores_std, alpha=0.2, color='navy', lw=lw)
+        plt.legend(loc='best')
+
+        fname = 'figs/' + title + '.png'
+        exists = True
+        num = 1
+        while exists:
+            if os.path.isfile(fname):
+                fname = 'figs/' + title + '-' + str(num) + '.png'
+                num += 1
+            else:
+                exists = False
+        plt.savefig(fname, dpi=1200)
+        plt.show()
+        plt.close()
+
+
+def new_grid(id_=None):
     if id_ == 2:
         params_grid = [
             {
@@ -1011,70 +1096,6 @@ def randomized_search_cv_rf():
 
 
 # rand = randomized_search_cv_rf()
-
-
-def plot_search_validation_curve(grid, param_name, title='Validation Curve', log=None):
-    df_cv_results = pd.DataFrame(grid.cv_results_)
-    param_grid_df = pd.DataFrame(grid.param_grid)
-    train_scores_mean = df_cv_results['mean_train_score']
-    valid_scores_mean = df_cv_results['mean_test_score']
-    train_scores_std = df_cv_results['std_train_score']
-    valid_scores_std = df_cv_results['std_test_score']
-
-    param_cols = [c for c in df_cv_results.columns if c[:6] == 'param_']
-    param_ranges = [param_grid_df[p[6:]].values.tolist()[0] for p in param_cols]
-    param_ranges_length = [len(pr) for pr in param_ranges]
-
-    train_scores_mean = np.array(train_scores_mean).reshape(*param_ranges_length)
-    valid_scores_mean = np.array(valid_scores_mean).reshape(*param_ranges_length)
-    train_scores_std = np.array(train_scores_std).reshape(*param_ranges_length)
-    valid_scores_std = np.array(valid_scores_std).reshape(*param_ranges_length)
-
-    param_name_idx = param_cols.index('param_{}'.format(param_name))
-
-    slices = []
-    for idx, param in enumerate(grid.best_params_):
-        if idx == param_name_idx:
-            slices.append(slice(None))
-            continue
-        best_param_val = grid.best_params_[param]
-        if isinstance(param_ranges[idx], np.ndarray):
-            idx_of_best_param = param_ranges[idx].tolist().index(best_param_val)
-        else:
-            idx_of_best_param = param_ranges[idx].index(best_param_val)
-        slices.append(idx_of_best_param)
-
-    train_scores_mean = train_scores_mean[tuple(slices)]
-    valid_scores_mean = valid_scores_mean[tuple(slices)]
-    train_scores_std = train_scores_std[tuple(slices)]
-    valid_scores_std = valid_scores_std[tuple(slices)]
-
-    plt.clf()
-
-    plt.title(title)
-    plt.xlabel(param_name)
-    plt.ylabel('score')
-
-    lw = 2
-
-    plot_fn = plt.plot
-    if log:
-        plot_fn = plt.semilogx
-
-    param_range = param_ranges[param_name_idx]
-    if not isinstance(param_range[0], numbers.Number):
-        param_range = [str(x) for x in param_range]
-    plot_fn(param_range, train_scores_mean, label='Training Score', color='darkorange', lw=lw)
-    plt.fill_between(param_range, train_scores_mean - train_scores_std, train_scores_mean +
-                     train_scores_std, alpha=0.2, color='darkorange', lw=lw)
-    plot_fn(param_range, valid_scores_mean, label='CV Score', color='navy', lw=lw)
-    plt.fill_between(param_range, valid_scores_mean - valid_scores_std, valid_scores_mean +
-                     valid_scores_std, alpha=0.2, color='navy', lw=lw)
-    plt.legend(loc='best')
-
-    plt.savefig('figs/' + title + ' ' + param_name + '.png', dpi=1200)
-    plt.show()
-    plt.close()
 
 
 def decision_tree_class():
