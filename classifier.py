@@ -311,10 +311,14 @@ def data_one_hot():
     data_ = ProcessData(data=[student_assessment.dataset.merge(assessments.dataset, how='left')],
                         read=False)
     data_ = ProcessData(data=[data_.dataset.merge(student_info.dataset, how='left')], read=False)
-    data_.info()
-    # sys.exit()
+    # data_.info()
     data_.dataset['presentation'] = data_.dataset['code_presentation']
-    data_.dataset['result'] = data_.dataset['final_result']
+
+    data_.dataset['result'] = data_.dataset['final_result'].astype('category')
+    data_.dataset['result'] = data_.dataset['result']\
+        .cat.reorder_categories(['Withdrawn', 'Fail', 'Pass', 'Distinction'], ordered=True)
+    data_.dataset['result'] = data_.dataset['result'].cat.codes
+
     encoded = pd.get_dummies(data_.dataset, columns=['age_band', 'imd_band', 'highest_education',
                                                      'gender', 'region', 'assessment_type',
                                                      'code_module', 'code_presentation',
@@ -325,14 +329,19 @@ def data_one_hot():
                         read=False)
     data_.info()
 
-    data_.dataset['result'] = data_.dataset['final_result']
     grouped = data_.dataset.groupby(['id_student', 'presentation', 'final_result'])
     compact = grouped.first()
     compact['score'] = grouped['score'].sum()
+    compact['score_mean'] = grouped['score'].mean()
     compact['weight'] = grouped['weight'].sum()
 
-    data_ = ProcessData(data=[compact], read=False)
-    data_.info()
+    data_ = ProcessData(data=[compact.loc[:, (compact != 0).any(axis=0)]], read=False)
+    corr = data_.corr()
+    corr = corr.reindex(corr['result'].sort_values()
+                        .reset_index(level=0).iloc[:, 0], axis=1).sort_values(by=['result'],
+                                                                              ascending=False)
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(corr["result"])
 
     data_.test_train_split()
 
