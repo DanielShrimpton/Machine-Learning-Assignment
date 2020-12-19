@@ -108,3 +108,65 @@ class ProcessData:
             else:
                 data = [self.dataset.drop(column, axis=axis)]
                 return ProcessData(read=False, data=data)
+
+
+def data_one_hot(folder):
+    # TODO check is one hot and if not rename to make sense
+    #  Import the datasets
+    student_assessment = ProcessData(folder=folder, filename="studentAssessment.csv")
+    assessments = ProcessData(folder=folder, filename="assessments.csv")
+    student_info = ProcessData(folder=folder, filename="studentInfo.csv")
+
+    #  Merge student assessment and assessment
+    data_ = ProcessData(data=[student_assessment.dataset.merge(assessments.dataset, how='left')],
+                        read=False)
+    #  Merge now with student info
+    data_ = ProcessData(data=[data_.dataset.merge(student_info.dataset, how='left')], read=False)
+    #  Duplicate the code_presentation field
+    data_.dataset['presentation'] = data_.dataset['code_presentation']
+
+    # Set the result column to be the final result numerically in ascending order of importance
+    data_.dataset['result'] = data_.dataset['final_result'].astype('category')
+    data_.dataset['result'] = data_.dataset['result']\
+        .cat.reorder_categories(['Withdrawn', 'Fail', 'Pass', 'Distinction'], ordered=True)
+    data_.dataset['result'] = data_.dataset['result'].cat.codes
+
+    #  One-hot-encode all the object data
+    encoded = pd.get_dummies(data_.dataset, columns=['age_band', 'imd_band', 'highest_education',
+                                                     'gender', 'region', 'assessment_type',
+                                                     'code_module', 'code_presentation',
+                                                     'id_assessment'])
+    data_ = ProcessData(data=[encoded], read=False)
+    data_.label_encode('disability', 'disability_')
+    # Remove the withdrawn students and drop any rows with NaN in
+    data_ = ProcessData(data=[data_.dataset.query('final_result != "Withdrawn"').dropna()],
+                        read=False)
+    data_.info()
+
+    # Group the data
+    grouped = data_.dataset.groupby(['id_student', 'presentation', 'final_result'])
+    compact = grouped.first()
+    # Create the sum and mean columns
+    compact['score'] = grouped['score'].sum()
+    compact['score_mean'] = grouped['score'].mean()
+    compact['weight'] = grouped['weight'].sum()
+
+    # Make the data reduced where any one-hot encoded columns are all zeros are dropped
+    data_ = ProcessData(data=[compact.loc[:, (compact != 0).any(axis=0)]], read=False)
+    # Print the correlation matrix
+    corr = data_.corr()
+    corr = corr.reindex(corr['result'].sort_values()
+                        .reset_index(level=0).iloc[:, 0], axis=1).sort_values(by=['result'],
+                                                                              ascending=False)
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(corr["result"])
+
+    # Split the data into test and train
+    data_.test_train_split()
+
+    # Remove the labels and make own dataset
+    _data_labels = ProcessData(read=False, tt=True, data=[data_.dataset['result'],
+                                                          data_.train_set.dataset['result'],
+                                                          data_.test_set.dataset['result']])
+    data_.drop('result')
+    return data_, _data_labels
