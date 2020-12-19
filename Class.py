@@ -11,11 +11,26 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 
 class ProcessData:
-    """A class to help with making pd.DataFrames and making useful functions on them"""
+    """A class to help with making pd.DataFrames and making useful functions on them
+    My Custom class to handle pandas datasets with custom, repeated functions"""
 
-    def __init__(self, folder: str = None, filename: str = None, read: bool = True,
+    def __init__(self, folder: str = None, filename: str = '.', read: bool = True,
                  data: List[pd.DataFrame] = None, tt: bool = False):
-        """An init function for the class, can be read in from file, or from passed in data"""
+        """
+        An init function for the class, can be read in from file, or from passed in data
+
+        :param folder: The folder the file is located in if reading in a file (default current
+        working directory)
+
+        :param filename: The filename of the data to read in
+
+        :param read: Boolean to say whether it needs to read from a file or not
+
+        :param data: A list containing the datasets of either length 1 with no test/train or
+        length 3 with [dataset, train, test]
+
+        :param tt: Boolean to say whether incoming data already has test and training sets
+        """
         if tt:  # If the incoming data already has test and training sets
             self.dataset = data[0].copy()
             self.train_set = ProcessData(read=False, data=[data[1]])
